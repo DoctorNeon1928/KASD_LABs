@@ -1,77 +1,134 @@
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <vector>
-using namespace std;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-bool isSym(const vector<vector<double>>& matrix)
+namespace Lab1
 {
-    int n = matrix.size();
-    for(int i = 0; i < n; i++)
+    // Базовый класс Организация
+    public class Organization
     {
-        for(int j = i + 1; j < n; j++)
+        public string Name { get; set; }
+        public string Address { get; set; }
+
+        public Organization(string name = "Неизвестно", string address = "Неизвестно")
         {
-            if(matrix[i][j] != matrix[j][i])
+            this.Name = name;
+            this.Address = address;
+        }
+
+        public virtual void DisplayInfo()
+        {
+            Console.WriteLine($"Организация: {this.Name}, Адрес: {this.Address}");
+        }
+    }
+
+    // Страховая компания
+    public class InsuranceCompany : Organization
+    {
+        public string InsuranceType { get; set; }
+
+        public InsuranceCompany(string name = "Неизвестно",
+                              string address = "Неизвестно",
+                              string insuranceType = "Неизвестно")
+            : base(name, address)
+        {
+            this.InsuranceType = insuranceType;
+        }
+
+        public override void DisplayInfo()
+        {
+            base.DisplayInfo();
+            Console.WriteLine($"Тип страхования: {this.InsuranceType}");
+        }
+    }
+
+    // Нефтегазовая компания
+    public class OilGasCompany : Organization
+    {
+        private int _wellsCount;
+
+        public int WellsCount
+        {
+            get { return this._wellsCount; }
+            set
             {
-                return false;
+                if (value < 0)
+                {
+                    Console.WriteLine("Не может быть отрицательного значений кол-ва скважин");
+                    this._wellsCount = 0;
+                }
+                else
+                {
+                    this._wellsCount = value;
+                }
             }
         }
-    }
-    return true;
-}
 
-double CalcLength(const vector<vector<double>>& G, const vector<double>& x)
-{
-    int n = x.size();
-    double result = 0.0;
-
-    //sqrt(x * G * x^T)
-    for(int i = 0; i < n; i++)
-    {
-        double temp = 0.0;
-        for(int j = 0; j < n; j++)
+        public OilGasCompany(string name = "Неизвестно",
+                           string address = "Неизвестно",
+                           int wellsCount = 0)
+            : base(name, address)
         {
-            temp += G[i][j] * x[j];
+            this.WellsCount = wellsCount;
         }
-        result += x[i] * temp;
-    }
 
-    return sqrt(result);
-}
-
-int main()
-{
-    setlocale(LC_ALL, "Ru");
-    ifstream input("input.txt");
-
-    int n;
-    input >> n;
-
-    vector<double> x(n);
-    for(int i = 0; i < n; i++)
-    {
-        input >> x[i];
-    }
-
-    vector<vector<double>> G(n, vector<double>(n));
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
+        public override void DisplayInfo()
         {
-            input >> G[i][j];
+            base.DisplayInfo();
+            Console.WriteLine($"Количество скважин: {this.WellsCount}");
         }
     }
 
-    input.close();
-
-    if (!isSym(G))
+    // Завод
+    public class Factory : Organization
     {
-        cerr << "Ошибка: матрица G не симметрична!" << endl;
-        return 1;
+        public string ProductType { get; set; }
+
+        public Factory(string name = "Неизвестно",
+                     string address = "Неизвестно",
+                     string productType = "Неизвестно")
+            : base(name, address)
+        {
+            this.ProductType = productType;
+        }
+
+        public override void DisplayInfo()
+        {
+            base.DisplayInfo();
+            Console.WriteLine($"Тип продукции: {this.ProductType}");
+        }
     }
 
-    double length = CalcLength(G, x);
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Organization org = new Organization("ООО 'Организация'", "Синклит");
+            InsuranceCompany ins = new InsuranceCompany("Страховая 'Страха'", "Челябинск", "Газострахование");
+            OilGasCompany oil = new OilGasCompany("РосНефть", "Матушка-Россия", 5000);
+            Factory factory = new Factory("Завод 'Пролетариат'", "Сталинград", "Сталь");
 
-    cout << "Длина вектора: " << length << endl;
-    return 0;
+            // Проверка инкапсуляции - попытка установить отрицательное значение
+            //OilGasCompany testOil = new OilGasCompany();
+            //testOil.WellsCount = -100;
+
+            org.DisplayInfo();
+            Console.WriteLine();
+
+            ins.DisplayInfo();
+            Console.WriteLine();
+
+            oil.DisplayInfo();
+            Console.WriteLine();
+
+            factory.DisplayInfo();
+            Console.WriteLine();
+
+            //testOil.DisplayInfo();
+
+            Console.ReadLine();
+        }
+    }
 }
