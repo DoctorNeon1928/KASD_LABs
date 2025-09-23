@@ -4,100 +4,128 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lab1
+namespace Lab2_Polymorphism
 {
-    // Базовый класс Организация
-    public class Organization
+    public abstract class Organization
     {
         public string Name { get; set; }
         public string Address { get; set; }
 
         public Organization(string name = "Неизвестно", string address = "Неизвестно")
         {
-            this.Name = name;
-            this.Address = address;
+            Name = name;
+            Address = address;
         }
 
-        public virtual void DisplayInfo()
+        public virtual void Display()
         {
-            Console.WriteLine($"Организация: {this.Name}, Адрес: {this.Address}");
+            Console.WriteLine($"Организация: {Name}, Адрес: {Address}");
         }
+
+        public abstract string GetName();
     }
 
-    // Страховая компания
-    public class InsuranceCompany : Organization
+
+
+    public interface IInsurable
     {
-        public string InsuranceType { get; set; }
-
-        public InsuranceCompany(string name = "Неизвестно",
-                              string address = "Неизвестно",
-                              string insuranceType = "Неизвестно")
-            : base(name, address)
-        {
-            this.InsuranceType = insuranceType;
-        }
-
-        public override void DisplayInfo()
-        {
-            base.DisplayInfo();
-            Console.WriteLine($"Тип страхования: {this.InsuranceType}");
-        }
+        void Insure(string objectName);
     }
 
-    // Нефтегазовая компания
-    public class OilGasCompany : Organization
+    public interface IExtractable
     {
-        private int _wellsCount;
+        void Resource();
+    }
 
-        public int WellsCount
+    public interface IProducible
+    {
+        void Product();
+    }
+
+
+
+    
+    public class InsuranceCompany : Organization, IInsurable
+    {
+        public string Specialization { get; set; }
+
+        public InsuranceCompany(string name, string address,
+                                string specialization) : base(name, address)
         {
-            get { return this._wellsCount; }
-            set
-            {
-                if (value < 0)
-                {
-                    Console.WriteLine("Не может быть отрицательного значений кол-ва скважин");
-                    this._wellsCount = 0;
-                }
-                else
-                {
-                    this._wellsCount = value;
-                }
-            }
+            Specialization = specialization;
         }
 
-        public OilGasCompany(string name = "Неизвестно",
-                           string address = "Неизвестно",
-                           int wellsCount = 0)
-            : base(name, address)
+        public override void Display()
         {
-            this.WellsCount = wellsCount;
+            Console.WriteLine($"Страховая компания: {Name}");
+            Console.WriteLine($"Адрес: {Address}");
+            Console.WriteLine($"Специализация: {Specialization}");
         }
 
-        public override void DisplayInfo()
+        public override string GetName()
         {
-            base.DisplayInfo();
-            Console.WriteLine($"Количество скважин: {this.WellsCount}");
+            return "Страховая компания";
+        }
+
+        public void Insure(string objectName)
+        {
+            Console.WriteLine($"{Name} застраховала: {objectName}");
         }
     }
 
-    // Завод
-    public class Factory : Organization
+    public class OilGasCompany : Organization, IExtractable
+    {
+        public int WellsCount { get; set; }
+
+        public OilGasCompany(string name, string address,
+                             int wellsCount) : base(name, address)
+        {
+            WellsCount = wellsCount;
+        }
+
+        public override void Display()
+        {
+            Console.WriteLine($"Нефтегазовая компания: {Name}");
+            Console.WriteLine($"Адрес: {Address}");
+            Console.WriteLine($"Количество скважин: {WellsCount}");
+        }
+
+        public override string GetName()
+        {
+            return "Нефтегазовая компания";
+        }
+
+        public void Resource()
+        {
+            Console.WriteLine($"{Name} добывает нефть и газ");
+        }
+    }
+
+    public class Factory : Organization, IProducible
     {
         public string ProductType { get; set; }
 
-        public Factory(string name = "Неизвестно",
-                     string address = "Неизвестно",
-                     string productType = "Неизвестно")
-            : base(name, address)
+        public Factory(string name, string address,
+                        string productType) : base(name, address)
         {
-            this.ProductType = productType;
+            ProductType = productType;
         }
 
-        public override void DisplayInfo()
+        public override void Display()
         {
-            base.DisplayInfo();
-            Console.WriteLine($"Тип продукции: {this.ProductType}");
+            Console.WriteLine($"Завод: {Name}");
+            Console.WriteLine($"Адрес: {Address}");
+            Console.WriteLine($"Продукция: {ProductType}");
+        }
+
+        public override string GetName()
+        {
+            return "Завод";
+        }
+
+        public void Product()
+        {
+            Console.WriteLine($"{Name} производит: {ProductType}");
         }
     }
 
@@ -105,28 +133,38 @@ namespace Lab1
     {
         static void Main(string[] args)
         {
-            Organization org = new Organization("ООО 'Организация'", "Синклит");
-            InsuranceCompany ins = new InsuranceCompany("Страховая 'Страха'", "Челябинск", "Газострахование");
-            OilGasCompany oil = new OilGasCompany("РосНефть", "Матушка-Россия", 5000);
-            Factory factory = new Factory("Завод 'Пролетариат'", "Сталинград", "Сталь");
 
-            // Проверка инкапсуляции - попытка установить отрицательное значение
-            //OilGasCompany testOil = new OilGasCompany();
-            //testOil.WellsCount = -100;
+            Organization org1 = new InsuranceCompany("Страх", "Москва", "Автострахование");
+            Organization org2 = new OilGasCompany("РосНефть", "Чита", 250);
+            Organization org3 = new Factory("АвтоВАЗ", "Тольятти", "Автомобили");
 
-            org.DisplayInfo();
-            Console.WriteLine();
 
-            ins.DisplayInfo();
-            Console.WriteLine();
+            List<Organization> orgs = new List<Organization> { org1, org2, org3 };
 
-            oil.DisplayInfo();
-            Console.WriteLine();
+            //Полиморфизм
+            foreach (Organization org in orgs)
+            {
+                org.Display();
+                Console.WriteLine($"Тип организации: {org.GetName()}");
+                Console.WriteLine();
+            }
 
-            factory.DisplayInfo();
-            Console.WriteLine();
+            Console.WriteLine("=== Демонстрация интерфейсов ===");
 
-            //testOil.DisplayInfo();
+            if (org1 is IInsurable insurer)
+            {
+                insurer.Insure("здание бизнес-центра");
+            }
+
+            if (org2 is IExtractable extractor)
+            {
+                extractor.Resource();
+            }
+
+            if (org3 is IProducible producer)
+            {
+                producer.Product();
+            }
 
             Console.ReadLine();
         }
