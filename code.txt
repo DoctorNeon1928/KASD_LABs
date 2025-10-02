@@ -1,172 +1,641 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lab2_Polymorphism
+namespace Lab3_FileWork
 {
-    public abstract class Organization
+    // Класс Студент
+    public class Student
+    {
+        public string LastName { get; set; }
+        public string FirstName { get; set; }
+        public int Course { get; set; }
+        public string Group { get; set; }
+        public List<int> Grades { get; set; }
+
+        public Student(string lastName, string firstName, int course, string group, List<int> grades)
+        {
+            LastName = lastName;
+            FirstName = firstName;
+            Course = course;
+            Group = group;
+            Grades = grades;
+        }
+
+        public bool IsExcellent
+        {
+            get
+            {
+                foreach (int grade in Grades)
+                {
+                    if (grade != 5)
+                        return false;
+                }
+                return true;
+            }
+        }
+    }
+
+    // Класс Предмет
+    public class Subject
     {
         public string Name { get; set; }
-        public string Address { get; set; }
+        public List<string> Departments { get; set; } = new List<string>();
 
-        public Organization(string name = "Неизвестно", string address = "Неизвестно")
+        public Subject(string name)
         {
             Name = name;
-            Address = address;
-        }
-
-        public virtual void Display()
-        {
-            Console.WriteLine($"Организация: {Name}, Адрес: {Address}");
-        }
-
-        public abstract string GetName();
-    }
-
-
-
-    public interface IInsurable
-    {
-        void Insure(string objectName);
-    }
-
-    public interface IExtractable
-    {
-        void Resource();
-    }
-
-    public interface IProducible
-    {
-        void Product();
-    }
-
-
-
-    
-    public class InsuranceCompany : Organization, IInsurable
-    {
-        public string Specialization { get; set; }
-
-        public InsuranceCompany(string name, string address,
-                                string specialization) : base(name, address)
-        {
-            Specialization = specialization;
-        }
-
-        public override void Display()
-        {
-            Console.WriteLine($"Страховая компания: {Name}");
-            Console.WriteLine($"Адрес: {Address}");
-            Console.WriteLine($"Специализация: {Specialization}");
-        }
-
-        public override string GetName()
-        {
-            return "Страховая компания";
-        }
-
-        public void Insure(string objectName)
-        {
-            Console.WriteLine($"{Name} застраховала: {objectName}");
         }
     }
 
-    public class OilGasCompany : Organization, IExtractable
+    // Главный класс Институт
+    public class Institute
     {
-        public int WellsCount { get; set; }
+        public string Name { get; set; }
+        public List<Student> Students { get; set; } = new List<Student>();
+        public List<Subject> Subjects { get; set; } = new List<Subject>();
 
-        public OilGasCompany(string name, string address,
-                             int wellsCount) : base(name, address)
+        public Institute(string name)
         {
-            WellsCount = wellsCount;
-        }
-
-        public override void Display()
-        {
-            Console.WriteLine($"Нефтегазовая компания: {Name}");
-            Console.WriteLine($"Адрес: {Address}");
-            Console.WriteLine($"Количество скважин: {WellsCount}");
-        }
-
-        public override string GetName()
-        {
-            return "Нефтегазовая компания";
-        }
-
-        public void Resource()
-        {
-            Console.WriteLine($"{Name} добывает нефть и газ");
-        }
-    }
-
-    public class Factory : Organization, IProducible
-    {
-        public string ProductType { get; set; }
-
-        public Factory(string name, string address,
-                        string productType) : base(name, address)
-        {
-            ProductType = productType;
-        }
-
-        public override void Display()
-        {
-            Console.WriteLine($"Завод: {Name}");
-            Console.WriteLine($"Адрес: {Address}");
-            Console.WriteLine($"Продукция: {ProductType}");
-        }
-
-        public override string GetName()
-        {
-            return "Завод";
-        }
-
-        public void Product()
-        {
-            Console.WriteLine($"{Name} производит: {ProductType}");
+            Name = name;
         }
     }
 
     class Program
     {
+        private static List<Institute> institutes = new List<Institute>();
+        private static int currentInstituteIndex = -1;
+
         static void Main(string[] args)
         {
+            institutes.Add(new Institute("КубГУ"));
+            currentInstituteIndex = 0;
 
-            Organization org1 = new InsuranceCompany("Страх", "Москва", "Автострахование");
-            Organization org2 = new OilGasCompany("РосНефть", "Чита", 250);
-            Organization org3 = new Factory("АвтоВАЗ", "Тольятти", "Автомобили");
-
-
-            List<Organization> orgs = new List<Organization> { org1, org2, org3 };
-
-            //Полиморфизм
-            foreach (Organization org in orgs)
+            bool exit = false;
+            while (!exit)
             {
-                org.Display();
-                Console.WriteLine($"Тип организации: {org.GetName()}");
+                Console.WriteLine("=== ГЛАВНОЕ МЕНЮ ===");
+                Console.WriteLine($"Текущий институт: {(currentInstituteIndex >= 0 ? institutes[currentInstituteIndex].Name : "Не выбран")}");
+                Console.WriteLine("1. Управление институтами");
+                Console.WriteLine("2. Управление студентами");
+                Console.WriteLine("3. Управление предметами");
+                Console.WriteLine("4. Выполнить запрос (вариант 5)");
+                Console.WriteLine("5. Выход");
+                Console.Write("Выберите пункт: ");
+
+                string choice = Console.ReadLine();
+                Console.WriteLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        ManageInstitutes();
+                        break;
+                    case "2":
+                        ManageStudents();
+                        break;
+                    case "3":
+                        ManageSubjects();
+                        break;
+                    case "4":
+                        ExecuteQuery();
+                        break;
+                    case "5":
+                        exit = true;
+                        break;
+                    default:
+                        Console.WriteLine("Неверный выбор!");
+                        break;
+                }
                 Console.WriteLine();
             }
+        }
 
-            Console.WriteLine("=== Демонстрация интерфейсов ===");
-
-            if (org1 is IInsurable insurer)
+        // Управление институтами
+        static void ManageInstitutes()
+        {
+            bool back = false;
+            while (!back)
             {
-                insurer.Insure("здание бизнес-центра");
+                Console.WriteLine("=== УПРАВЛЕНИЕ ИНСТИТУТАМИ ===");
+                Console.WriteLine($"Текущий институт: {(currentInstituteIndex >= 0 ? institutes[currentInstituteIndex].Name : "Не выбран")}");
+                Console.WriteLine("1. Создать новый институт");
+                Console.WriteLine("2. Выбрать институт");
+                Console.WriteLine("3. Показать все институты");
+                Console.WriteLine("4. Переименовать институт");
+                Console.WriteLine("5. Удалить институт");
+                Console.WriteLine("6. Назад");
+                Console.Write("Выберите пункт: ");
+
+                string choice = Console.ReadLine();
+                Console.WriteLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        CreateInstitute();
+                        break;
+                    case "2":
+                        SelectInstitute();
+                        break;
+                    case "3":
+                        ShowAllInstitutes();
+                        break;
+                    case "4":
+                        RenameInstitute();
+                        break;
+                    case "5":
+                        DeleteInstitute();
+                        break;
+                    case "6":
+                        back = true;
+                        break;
+                    default:
+                        Console.WriteLine("Неверный выбор!");
+                        break;
+                }
+                Console.WriteLine();
+            }
+        }
+
+        // Управление студентами
+        static void ManageStudents()
+        {
+            if (currentInstituteIndex < 0)
+            {
+                Console.WriteLine("Сначала выберите институт!");
+                return;
             }
 
-            if (org2 is IExtractable extractor)
+            Institute currentInstitute = institutes[currentInstituteIndex];
+
+            bool back = false;
+            while (!back)
             {
-                extractor.Resource();
+                Console.WriteLine($"=== УПРАВЛЕНИЕ СТУДЕНТАМИ ({currentInstitute.Name}) ===");
+                Console.WriteLine("1. Добавить студента");
+                Console.WriteLine("2. Редактировать студента");
+                Console.WriteLine("3. Удалить студента");
+                Console.WriteLine("4. Показать всех студентов");
+                Console.WriteLine("5. Назад");
+                Console.Write("Выберите пункт: ");
+
+                string choice = Console.ReadLine();
+                Console.WriteLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        AddStudent(currentInstitute);
+                        break;
+                    case "2":
+                        EditStudent(currentInstitute);
+                        break;
+                    case "3":
+                        DeleteStudent(currentInstitute);
+                        break;
+                    case "4":
+                        ShowAllStudents(currentInstitute);
+                        break;
+                    case "5":
+                        back = true;
+                        break;
+                    default:
+                        Console.WriteLine("Неверный выбор!");
+                        break;
+                }
+                Console.WriteLine();
+            }
+        }
+
+        // Управление предметами
+        static void ManageSubjects()
+        {
+            if (currentInstituteIndex < 0)
+            {
+                Console.WriteLine("Сначала выберите институт!");
+                return;
             }
 
-            if (org3 is IProducible producer)
+            Institute currentInstitute = institutes[currentInstituteIndex];
+
+            bool back = false;
+            while (!back)
             {
-                producer.Product();
+                Console.WriteLine($"=== УПРАВЛЕНИЕ ПРЕДМЕТАМИ ({currentInstitute.Name}) ===");
+                Console.WriteLine("1. Добавить предмет");
+                Console.WriteLine("2. Редактировать предмет");
+                Console.WriteLine("3. Удалить предмет");
+                Console.WriteLine("4. Показать все предметы");
+                Console.WriteLine("5. Назад");
+                Console.Write("Выберите пункт: ");
+
+                string choice = Console.ReadLine();
+                Console.WriteLine();
+
+                switch (choice)
+                {
+                    case "1":
+                        AddSubject(currentInstitute);
+                        break;
+                    case "2":
+                        EditSubject(currentInstitute);
+                        break;
+                    case "3":
+                        DeleteSubject(currentInstitute);
+                        break;
+                    case "4":
+                        ShowAllSubjects(currentInstitute);
+                        break;
+                    case "5":
+                        back = true;
+                        break;
+                    default:
+                        Console.WriteLine("Неверный выбор!");
+                        break;
+                }
+                Console.WriteLine();
+            }
+        }
+
+        // Создание нового института
+        static void CreateInstitute()
+        {
+            Console.Write("Введите название нового института: ");
+            string name = Console.ReadLine();
+
+            institutes.Add(new Institute(name));
+            currentInstituteIndex = institutes.Count - 1;
+
+            Console.WriteLine($"Институт '{name}' создан и выбран текущим!");
+        }
+
+        // Выбор института
+        static void SelectInstitute()
+        {
+            if (institutes.Count == 0)
+            {
+                Console.WriteLine("Нет доступных институтов!");
+                return;
             }
 
-            Console.ReadLine();
+            ShowAllInstitutes();
+            Console.Write("Введите номер института для выбора: ");
+            int index = int.Parse(Console.ReadLine());
+
+            if (index >= 0 && index < institutes.Count)
+            {
+                currentInstituteIndex = index;
+                Console.WriteLine($"Выбран институт: {institutes[currentInstituteIndex].Name}");
+            }
+            else
+            {
+                Console.WriteLine("Неверный номер института!");
+            }
+        }
+
+        // Показать все институты
+        static void ShowAllInstitutes()
+        {
+            if (institutes.Count == 0)
+            {
+                Console.WriteLine("Нет институтов!");
+                return;
+            }
+
+            Console.WriteLine("=== Список институтов ===");
+            for (int i = 0; i < institutes.Count; i++)
+            {
+                string currentMarker = (i == currentInstituteIndex) ? " [ТЕКУЩИЙ]" : "";
+                Console.WriteLine($"{i}. {institutes[i].Name} (Студентов: {institutes[i].Students.Count}, Предметов: {institutes[i].Subjects.Count}){currentMarker}");
+            }
+        }
+
+        // Переименование института
+        static void RenameInstitute()
+        {
+            if (institutes.Count == 0)
+            {
+                Console.WriteLine("Нет институтов!");
+                return;
+            }
+
+            ShowAllInstitutes();
+            Console.Write("Введите номер института для переименования: ");
+            int index = int.Parse(Console.ReadLine());
+
+            if (index >= 0 && index < institutes.Count)
+            {
+                Console.Write("Введите новое название: ");
+                string newName = Console.ReadLine();
+                institutes[index].Name = newName;
+                Console.WriteLine("Институт переименован!");
+            }
+            else
+            {
+                Console.WriteLine("Неверный номер института!");
+            }
+        }
+
+        // Удаление института
+        static void DeleteInstitute()
+        {
+            if (institutes.Count == 0)
+            {
+                Console.WriteLine("Нет институтов!");
+                return;
+            }
+
+            ShowAllInstitutes();
+            Console.Write("Введите номер института для удаления: ");
+            int index = int.Parse(Console.ReadLine());
+
+            if (index >= 0 && index < institutes.Count)
+            {
+                string deletedName = institutes[index].Name;
+                institutes.RemoveAt(index);
+
+                if (institutes.Count == 0)
+                {
+                    currentInstituteIndex = -1;
+                }
+                else if (currentInstituteIndex >= institutes.Count)
+                {
+                    currentInstituteIndex = institutes.Count - 1;
+                }
+
+                Console.WriteLine($"Институт '{deletedName}' удален!");
+            }
+            else
+            {
+                Console.WriteLine("Неверный номер института!");
+            }
+        }
+
+        // Добавление студента
+        static void AddStudent(Institute institute)
+        {
+            Console.Write("Фамилия: ");
+            string lastName = Console.ReadLine();
+            Console.Write("Имя: ");
+            string firstName = Console.ReadLine();
+            Console.Write("Курс: ");
+            int course = int.Parse(Console.ReadLine());
+            Console.Write("Группа: ");
+            string group = Console.ReadLine();
+
+            Console.WriteLine("Введите оценки через пробел (2-5): ");
+            string[] gradesInput = Console.ReadLine().Split(' ');
+            List<int> grades = new List<int>();
+            foreach (string gradeStr in gradesInput)
+            {
+                grades.Add(int.Parse(gradeStr));
+            }
+
+            institute.Students.Add(new Student(lastName, firstName, course, group, grades));
+            Console.WriteLine("Студент добавлен!");
+        }
+
+        // Редактирование студента
+        static void EditStudent(Institute institute)
+        {
+            ShowAllStudents(institute);
+            if (institute.Students.Count == 0) return;
+
+            Console.Write("Введите индекс студента для редактирования: ");
+            int index = int.Parse(Console.ReadLine());
+
+            if (index >= 0 && index < institute.Students.Count)
+            {
+                Console.Write("Фамилия: ");
+                institute.Students[index].LastName = Console.ReadLine();
+                Console.Write("Имя: ");
+                institute.Students[index].FirstName = Console.ReadLine();
+                Console.Write("Курс: ");
+                institute.Students[index].Course = int.Parse(Console.ReadLine());
+                Console.Write("Группа: ");
+                institute.Students[index].Group = Console.ReadLine();
+
+                Console.WriteLine("Введите новые оценки через пробел: ");
+                string[] gradesInput = Console.ReadLine().Split(' ');
+                List<int> newGrades = new List<int>();
+                foreach (string gradeStr in gradesInput)
+                {
+                    newGrades.Add(int.Parse(gradeStr));
+                }
+                institute.Students[index].Grades = newGrades;
+
+                Console.WriteLine("Данные обновлены!");
+            }
+            else
+            {
+                Console.WriteLine("Неверный индекс!");
+            }
+        }
+
+        // Удаление студента
+        static void DeleteStudent(Institute institute)
+        {
+            ShowAllStudents(institute);
+            if (institute.Students.Count == 0) return;
+
+            Console.Write("Введите индекс студента для удаления: ");
+            int index = int.Parse(Console.ReadLine());
+
+            if (index >= 0 && index < institute.Students.Count)
+            {
+                string deletedName = $"{institute.Students[index].LastName} {institute.Students[index].FirstName}";
+                institute.Students.RemoveAt(index);
+                Console.WriteLine($"Студент {deletedName} удален!");
+            }
+            else
+            {
+                Console.WriteLine("Неверный индекс!");
+            }
+        }
+
+        // Показать всех студентов
+        static void ShowAllStudents(Institute institute)
+        {
+            if (institute.Students.Count == 0)
+            {
+                Console.WriteLine("Студентов нет!");
+                return;
+            }
+
+            Console.WriteLine($"=== Список студентов института '{institute.Name}' ===");
+            for (int i = 0; i < institute.Students.Count; i++)
+            {
+                Student student = institute.Students[i];
+                Console.WriteLine($"{i}. {student.LastName} {student.FirstName}, {student.Course} курс, гр. {student.Group}");
+                Console.Write($" Оценки: ");
+                for (int j = 0; j < student.Grades.Count; j++)
+                {
+                    Console.Write(student.Grades[j]);
+                    if (j < student.Grades.Count - 1)
+                        Console.Write(", ");
+                }
+                Console.WriteLine();
+                Console.WriteLine($" Отличник: {(student.IsExcellent ? "Да" : "Нет")}");
+            }
+        }
+
+        // Добавление предмета
+        static void AddSubject(Institute institute)
+        {
+            Console.Write("Название предмета: ");
+            string name = Console.ReadLine();
+
+            Subject subject = new Subject(name);
+
+            Console.WriteLine("Введите названия кафедр через пробел: ");
+            string[] deptsInput = Console.ReadLine().Split(' ');
+            foreach (string dept in deptsInput)
+            {
+                subject.Departments.Add(dept);
+            }
+
+            institute.Subjects.Add(subject);
+            Console.WriteLine("Предмет добавлен!");
+        }
+
+        // Редактирование предмета
+        static void EditSubject(Institute institute)
+        {
+            ShowAllSubjects(institute);
+            if (institute.Subjects.Count == 0) return;
+
+            Console.Write("Введите индекс предмета для редактирования: ");
+            int index = int.Parse(Console.ReadLine());
+
+            if (index >= 0 && index < institute.Subjects.Count)
+            {
+                Console.Write("Название предмета: ");
+                institute.Subjects[index].Name = Console.ReadLine();
+
+                Console.WriteLine("Введите новые названия кафедр через пробел: ");
+                string[] deptsInput = Console.ReadLine().Split(' ');
+                institute.Subjects[index].Departments.Clear();
+                foreach (string dept in deptsInput)
+                {
+                    institute.Subjects[index].Departments.Add(dept);
+                }
+
+                Console.WriteLine("Данные предмета обновлены!");
+            }
+            else
+            {
+                Console.WriteLine("Неверный индекс!");
+            }
+        }
+
+        // Удаление предмета
+        static void DeleteSubject(Institute institute)
+        {
+            ShowAllSubjects(institute);
+            if (institute.Subjects.Count == 0) return;
+
+            Console.Write("Введите индекс предмета для удаления: ");
+            int index = int.Parse(Console.ReadLine());
+
+            if (index >= 0 && index < institute.Subjects.Count)
+            {
+                string deletedName = institute.Subjects[index].Name;
+                institute.Subjects.RemoveAt(index);
+                Console.WriteLine($"Предмет '{deletedName}' удален!");
+            }
+            else
+            {
+                Console.WriteLine("Неверный индекс!");
+            }
+        }
+
+        // Показать все предметы
+        static void ShowAllSubjects(Institute institute)
+        {
+            if (institute.Subjects.Count == 0)
+            {
+                Console.WriteLine("Предметов нет!");
+                return;
+            }
+
+            Console.WriteLine($"=== Список предметов института '{institute.Name}' ===");
+            for (int i = 0; i < institute.Subjects.Count; i++)
+            {
+                Subject subject = institute.Subjects[i];
+                Console.Write($"{i}. {subject.Name} (Кафедры: ");
+                for (int j = 0; j < subject.Departments.Count; j++)
+                {
+                    Console.Write(subject.Departments[j]);
+                    if (j < subject.Departments.Count - 1)
+                        Console.Write(", ");
+                }
+                Console.WriteLine(")");
+            }
+        }
+
+        // Полный список отличников с указанием института, группы и курса
+        static void ExecuteQuery()
+        {
+            if (institutes.Count == 0)
+            {
+                Console.WriteLine("Нет институтов для выполнения запроса!");
+                return;
+            }
+
+            // Собираем всех отличников из всех институтов
+            int totalExcellentStudents = 0;
+
+            Console.WriteLine("=== Полный список отличников из всех институтов ===");
+            foreach (Institute institute in institutes)
+            {
+                foreach (Student student in institute.Students)
+                {
+                    if (student.IsExcellent)
+                    {
+                        Console.WriteLine($"{student.LastName} {student.FirstName}, {institute.Name}, {student.Course} курс, гр. {student.Group}");
+                        totalExcellentStudents++;
+                    }
+                }
+            }
+
+            if (totalExcellentStudents == 0)
+            {
+                Console.WriteLine("Отличников нет ни в одном институте!");
+                return;
+            }
+
+            // Сохранение результата в файл
+            string resultPath = @"Z:\excellent_students.txt";
+
+            string directory = Path.GetDirectoryName(resultPath);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            using (StreamWriter sw = new StreamWriter(resultPath, false, System.Text.Encoding.Default))
+            {
+                sw.WriteLine("=== Полный список отличников из всех институтов ===");
+                sw.WriteLine($"Всего отличников: {totalExcellentStudents}");
+                sw.WriteLine();
+
+                foreach (Institute institute in institutes)
+                {
+                    foreach (Student student in institute.Students)
+                    {
+                        if (student.IsExcellent)
+                        {
+                            sw.WriteLine($"{student.LastName} {student.FirstName}, {institute.Name}, {student.Course} курс, гр. {student.Group}");
+                        }
+                    }
+                }
+            }
+
+            Console.WriteLine($"Результат сохранен в файл: {resultPath}");
         }
     }
 }
