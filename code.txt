@@ -1,14 +1,35 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lab3_FileWork
+namespace Lab4_FileWork
 {
-    // Класс Студент
-    public class Student
+
+    public interface IStudentOperations
+    {
+        void DisplayInfo();
+        bool CheckAcademicStatus();
+    }
+
+    public interface ISubjectOperations
+    {
+        void DisplaySubjectInfo();
+        void AddDepartment(string department);
+    }
+
+    public interface IInstituteOperations
+    {
+        void AddStudent(Student student);
+        void RemoveStudent(Student student);
+        List<Student> GetExcellentStudents();
+    }
+
+    public delegate void StudentActionDelegate(Student student);
+    public delegate void SubjectActionDelegate(Subject subject);
+    public delegate void InstituteActionDelegate(Institute institute);
+    public class Student : IStudentOperations
     {
         public string LastName { get; set; }
         public string FirstName { get; set; }
@@ -25,6 +46,25 @@ namespace Lab3_FileWork
             Grades = grades;
         }
 
+
+        public void DisplayInfo()
+        {
+            Console.WriteLine($"Студент: {LastName} {FirstName}, {Course} курс, группа {Group}");
+            Console.Write("Оценки: ");
+            for (int j = 0; j < Grades.Count; j++)
+            {
+                Console.Write(Grades[j]);
+                if (j < Grades.Count - 1)
+                    Console.Write(", ");
+            }
+            Console.WriteLine();
+        }
+
+        public bool CheckAcademicStatus()
+        {
+            return IsExcellent;
+        }
+
         public bool IsExcellent
         {
             get
@@ -39,8 +79,7 @@ namespace Lab3_FileWork
         }
     }
 
-    // Класс Предмет
-    public class Subject
+    public class Subject : ISubjectOperations
     {
         public string Name { get; set; }
         public List<string> Departments { get; set; } = new List<string>();
@@ -49,10 +88,27 @@ namespace Lab3_FileWork
         {
             Name = name;
         }
+
+        public void DisplaySubjectInfo()
+        {
+            Console.Write($"Предмет: {Name} (Кафедры: ");
+            for (int i = 0; i < Departments.Count; i++)
+            {
+                Console.Write(Departments[i]);
+                if (i < Departments.Count - 1)
+                    Console.Write(", ");
+            }
+            Console.WriteLine(")");
+        }
+
+        public void AddDepartment(string department)
+        {
+            Departments.Add(department);
+            Console.WriteLine($"Кафедра '{department}' добавлена к предмету '{Name}'");
+        }
     }
 
-    // Главный класс Институт
-    public class Institute
+    public class Institute : IInstituteOperations
     {
         public string Name { get; set; }
         public List<Student> Students { get; set; } = new List<Student>();
@@ -62,6 +118,33 @@ namespace Lab3_FileWork
         {
             Name = name;
         }
+
+        public void AddStudent(Student student)
+        {
+            Students.Add(student);
+            Console.WriteLine($"Студент {student.LastName} {student.FirstName} добавлен в институт {Name}");
+        }
+
+        public void RemoveStudent(Student student)
+        {
+            if (Students.Remove(student))
+            {
+                Console.WriteLine($"Студент {student.LastName} {student.FirstName} удален из института {Name}");
+            }
+        }
+
+        public List<Student> GetExcellentStudents()
+        {
+            List<Student> excellentStudents = new List<Student>();
+            foreach (Student student in Students)
+            {
+                if (student.IsExcellent)
+                {
+                    excellentStudents.Add(student);
+                }
+            }
+            return excellentStudents;
+        }
     }
 
     class Program
@@ -69,21 +152,36 @@ namespace Lab3_FileWork
         private static List<Institute> institutes = new List<Institute>();
         private static int currentInstituteIndex = -1;
 
+        private static StudentActionDelegate studentActions;
+        private static SubjectActionDelegate subjectActions;
+        private static InstituteActionDelegate instituteActions;
+
         static void Main(string[] args)
         {
+
+            studentActions = DisplayStudentInfo;
+            studentActions += CheckStudentStatus;
+
+            subjectActions = DisplaySubjectInfo;
+            subjectActions += ShowSubjectDepartments;
+
+            instituteActions = DisplayInstituteInfo;
+            instituteActions += ShowInstituteStatistics;
+
             institutes.Add(new Institute("КубГУ"));
             currentInstituteIndex = 0;
 
             bool exit = false;
             while (!exit)
             {
-                Console.WriteLine("=== ГЛАВНОЕ МЕНЮ ===");
+                Console.WriteLine("ГЛАВНОЕ МЕНЮ");
                 Console.WriteLine($"Текущий институт: {(currentInstituteIndex >= 0 ? institutes[currentInstituteIndex].Name : "Не выбран")}");
                 Console.WriteLine("1. Управление институтами");
                 Console.WriteLine("2. Управление студентами");
                 Console.WriteLine("3. Управление предметами");
                 Console.WriteLine("4. Выполнить запрос (вариант 5)");
-                Console.WriteLine("5. Выход");
+                Console.WriteLine("5. Тестирование интерфейсов и делегатов");
+                Console.WriteLine("6. Выход");
                 Console.Write("Выберите пункт: ");
 
                 string choice = Console.ReadLine();
@@ -104,6 +202,9 @@ namespace Lab3_FileWork
                         ExecuteQuery();
                         break;
                     case "5":
+                        TestInterfacesAndDelegates();
+                        break;
+                    case "6":
                         exit = true;
                         break;
                     default:
@@ -114,7 +215,118 @@ namespace Lab3_FileWork
             }
         }
 
-        // Управление институтами
+        // Методы для делегатов
+        static void DisplayStudentInfo(Student student)
+        {
+            Console.WriteLine("=== Информация о студенте ===");
+            student.DisplayInfo();
+        }
+
+        static void CheckStudentStatus(Student student)
+        {
+            Console.WriteLine($"Статус отличника: {student.CheckAcademicStatus()}");
+        }
+
+        static void DisplaySubjectInfo(Subject subject)
+        {
+            Console.WriteLine("=== Информация о предмете ===");
+            subject.DisplaySubjectInfo();
+        }
+
+        static void ShowSubjectDepartments(Subject subject)
+        {
+            Console.WriteLine($"Количество кафедр: {subject.Departments.Count}");
+        }
+
+        static void DisplayInstituteInfo(Institute institute)
+        {
+            Console.WriteLine($"Информация об институте: {institute.Name}");
+            Console.WriteLine($"Количество студентов: {institute.Students.Count}");
+            Console.WriteLine($"Количество предметов: {institute.Subjects.Count}");
+        }
+
+        static void ShowInstituteStatistics(Institute institute)
+        {
+            int excellentCount = institute.GetExcellentStudents().Count;
+            Console.WriteLine($"Количество отличников: {excellentCount}");
+        }
+
+        // Тестирование интерфейсов и делегатов
+        static void TestInterfacesAndDelegates()
+        {
+            if (currentInstituteIndex < 0)
+            {
+                Console.WriteLine("Сначала выберите институт!");
+                return;
+            }
+
+            Institute currentInstitute = institutes[currentInstituteIndex];
+
+            Console.WriteLine("ТЕСТИРОВАНИЕ ИНТЕРФЕЙСОВ И ДЕЛЕГАТОВ");
+
+            Console.WriteLine("\nМногоадресный делегат для института");
+            instituteActions(currentInstitute);
+
+            Console.WriteLine("\nМногоадресный делегат для студентов");
+            if (currentInstitute.Students.Count > 0)
+            {
+                foreach (Student student in currentInstitute.Students)
+                {
+                    Console.WriteLine($"\nОбработка студента: {student.LastName} {student.FirstName}");
+                    studentActions(student);
+                    Console.WriteLine("---");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Нет студентов для тестирования!");
+            }
+
+            Console.WriteLine("\n Многоадресный делегат для предметов");
+            if (currentInstitute.Subjects.Count > 0)
+            {
+                foreach (Subject subject in currentInstitute.Subjects)
+                {
+                    Console.WriteLine($"\nОбработка предмета: {subject.Name}");
+                    subjectActions(subject);
+                    Console.WriteLine("---");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Нет предметов для тестирования!");
+            }
+
+            Console.WriteLine("\nТестирование интерфейсов");
+            TestInterfaceOperations(currentInstitute);
+
+            Console.WriteLine("\nТестирование завершено!");
+        }
+
+        static void TestInterfaceOperations(Institute institute)
+        {
+
+            Console.WriteLine("Тестирование IInstituteOperations:");
+            List<Student> excellentStudents = institute.GetExcellentStudents();
+            Console.WriteLine($"Найдено отличников через интерфейс: {excellentStudents.Count}");
+
+            Console.WriteLine("\nТестирование IStudentOperations:");
+            if (institute.Students.Count > 0)
+            {
+                Student testStudent = institute.Students[0];
+                testStudent.DisplayInfo();
+                Console.WriteLine($"Проверка статуса: {testStudent.CheckAcademicStatus()}");
+            }
+
+            Console.WriteLine("\nТестирование ISubjectOperations:");
+            if (institute.Subjects.Count > 0)
+            {
+                Subject testSubject = institute.Subjects[0];
+                testSubject.DisplaySubjectInfo();
+                testSubject.AddDepartment("Тестовая кафедра");
+            }
+        }
+
         static void ManageInstitutes()
         {
             bool back = false;
@@ -161,7 +373,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Управление студентами
         static void ManageStudents()
         {
             if (currentInstituteIndex < 0)
@@ -211,7 +422,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Управление предметами
         static void ManageSubjects()
         {
             if (currentInstituteIndex < 0)
@@ -261,7 +471,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Создание нового института
         static void CreateInstitute()
         {
             Console.Write("Введите название нового института: ");
@@ -273,7 +482,6 @@ namespace Lab3_FileWork
             Console.WriteLine($"Институт '{name}' создан и выбран текущим!");
         }
 
-        // Выбор института
         static void SelectInstitute()
         {
             if (institutes.Count == 0)
@@ -297,7 +505,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Показать все институты
         static void ShowAllInstitutes()
         {
             if (institutes.Count == 0)
@@ -314,7 +521,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Переименование института
         static void RenameInstitute()
         {
             if (institutes.Count == 0)
@@ -340,7 +546,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Удаление института
         static void DeleteInstitute()
         {
             if (institutes.Count == 0)
@@ -375,7 +580,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Добавление студента
         static void AddStudent(Institute institute)
         {
             Console.Write("Фамилия: ");
@@ -395,11 +599,11 @@ namespace Lab3_FileWork
                 grades.Add(int.Parse(gradeStr));
             }
 
-            institute.Students.Add(new Student(lastName, firstName, course, group, grades));
+            Student student = new Student(lastName, firstName, course, group, grades);
+            institute.Students.Add(student);
             Console.WriteLine("Студент добавлен!");
         }
 
-        // Редактирование студента
         static void EditStudent(Institute institute)
         {
             ShowAllStudents(institute);
@@ -436,7 +640,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Удаление студента
         static void DeleteStudent(Institute institute)
         {
             ShowAllStudents(institute);
@@ -457,7 +660,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Показать всех студентов
         static void ShowAllStudents(Institute institute)
         {
             if (institute.Students.Count == 0)
@@ -471,7 +673,7 @@ namespace Lab3_FileWork
             {
                 Student student = institute.Students[i];
                 Console.WriteLine($"{i}. {student.LastName} {student.FirstName}, {student.Course} курс, гр. {student.Group}");
-                Console.Write($" Оценки: ");
+                Console.Write($"   Оценки: ");
                 for (int j = 0; j < student.Grades.Count; j++)
                 {
                     Console.Write(student.Grades[j]);
@@ -479,11 +681,10 @@ namespace Lab3_FileWork
                         Console.Write(", ");
                 }
                 Console.WriteLine();
-                Console.WriteLine($" Отличник: {(student.IsExcellent ? "Да" : "Нет")}");
+                Console.WriteLine($"   Отличник: {(student.IsExcellent ? "Да" : "Нет")}");
             }
         }
 
-        // Добавление предмета
         static void AddSubject(Institute institute)
         {
             Console.Write("Название предмета: ");
@@ -502,7 +703,6 @@ namespace Lab3_FileWork
             Console.WriteLine("Предмет добавлен!");
         }
 
-        // Редактирование предмета
         static void EditSubject(Institute institute)
         {
             ShowAllSubjects(institute);
@@ -532,7 +732,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Удаление предмета
         static void DeleteSubject(Institute institute)
         {
             ShowAllSubjects(institute);
@@ -553,7 +752,6 @@ namespace Lab3_FileWork
             }
         }
 
-        // Показать все предметы
         static void ShowAllSubjects(Institute institute)
         {
             if (institute.Subjects.Count == 0)
@@ -577,7 +775,7 @@ namespace Lab3_FileWork
             }
         }
 
-        // Полный список отличников с указанием института, группы и курса
+        // Выполнение запроса варианта 5: Полный список отличников с указанием института, группы и курса
         static void ExecuteQuery()
         {
             if (institutes.Count == 0)
@@ -608,34 +806,6 @@ namespace Lab3_FileWork
                 return;
             }
 
-            // Сохранение результата в файл
-            string resultPath = @"Z:\excellent_students.txt";
-
-            string directory = Path.GetDirectoryName(resultPath);
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            using (StreamWriter sw = new StreamWriter(resultPath, false, System.Text.Encoding.Default))
-            {
-                sw.WriteLine("=== Полный список отличников из всех институтов ===");
-                sw.WriteLine($"Всего отличников: {totalExcellentStudents}");
-                sw.WriteLine();
-
-                foreach (Institute institute in institutes)
-                {
-                    foreach (Student student in institute.Students)
-                    {
-                        if (student.IsExcellent)
-                        {
-                            sw.WriteLine($"{student.LastName} {student.FirstName}, {institute.Name}, {student.Course} курс, гр. {student.Group}");
-                        }
-                    }
-                }
-            }
-
-            Console.WriteLine($"Результат сохранен в файл: {resultPath}");
         }
     }
 }
