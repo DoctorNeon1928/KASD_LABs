@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Lab4_FileWork
 {
+    public delegate void ErrorEventHandler(string message);
 
     public interface IStudentOperations
     {
@@ -29,6 +30,7 @@ namespace Lab4_FileWork
     public delegate void StudentActionDelegate(Student student);
     public delegate void SubjectActionDelegate(Subject subject);
     public delegate void InstituteActionDelegate(Institute institute);
+
     public class Student : IStudentOperations
     {
         public string LastName { get; set; }
@@ -45,7 +47,6 @@ namespace Lab4_FileWork
             Group = group;
             Grades = grades;
         }
-
 
         public void DisplayInfo()
         {
@@ -156,8 +157,13 @@ namespace Lab4_FileWork
         private static SubjectActionDelegate subjectActions;
         private static InstituteActionDelegate instituteActions;
 
+        public static event ErrorEventHandler ErrorOccurred;
+        public static event ErrorEventHandler WarningOccurred;
+
         static void Main(string[] args)
         {
+            ErrorOccurred += DisplayErrorMessage;
+            WarningOccurred += DisplayWarningMessage;
 
             studentActions = DisplayStudentInfo;
             studentActions += CheckStudentStatus;
@@ -181,7 +187,8 @@ namespace Lab4_FileWork
                 Console.WriteLine("3. Управление предметами");
                 Console.WriteLine("4. Выполнить запрос (вариант 5)");
                 Console.WriteLine("5. Тестирование интерфейсов и делегатов");
-                Console.WriteLine("6. Выход");
+                Console.WriteLine("6. Тестирование обработки ошибок");
+                Console.WriteLine("7. Выход");
                 Console.Write("Выберите пункт: ");
 
                 string choice = Console.ReadLine();
@@ -205,6 +212,9 @@ namespace Lab4_FileWork
                         TestInterfacesAndDelegates();
                         break;
                     case "6":
+                        TestErrorHandling();
+                        break;
+                    case "7":
                         exit = true;
                         break;
                     default:
@@ -212,6 +222,127 @@ namespace Lab4_FileWork
                         break;
                 }
                 Console.WriteLine();
+            }
+        }
+
+        // Методы для обработки событий ошибок
+        static void DisplayErrorMessage(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"ОШИБКА: {message}");
+            Console.ResetColor();
+        }
+
+        static void DisplayWarningMessage(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"ПРЕДУПРЕЖДЕНИЕ: {message}");
+            Console.ResetColor();
+        }
+
+        static void TestErrorHandling()
+        {
+            Console.WriteLine("=== ТЕСТИРОВАНИЕ ОБРАБОТКИ ОШИБОК ===");
+            Console.WriteLine("1. Деление на ноль");
+            Console.WriteLine("2. Выход за границы массива");
+            Console.WriteLine("3. Преобразование типов");
+            Console.WriteLine("4. Нулевая ссылка");
+            Console.WriteLine("5. Переполнение");
+            Console.WriteLine("6. Неверный формат");
+            Console.WriteLine("7. Пользовательская ошибка");
+            Console.Write("Выберите тип ошибки для тестирования: ");
+
+            string choice = Console.ReadLine();
+            Console.WriteLine();
+
+            try
+            {
+                switch (choice)
+                {
+                    case "1":
+                        // Деление на ноль
+                        int a = 10;
+                        int b = 0;
+                        int result = a / b;
+                        break;
+
+                    case "2":
+                        // Выход за границы массива
+                        int[] array = new int[5];
+                        int value = array[10];
+                        break;
+
+                    case "3":
+                        // Преобразование типов
+                        object obj = "не число";
+                        int number = (int)obj;
+                        break;
+
+                    case "4":
+                        // Нулевая ссылка
+                        Student nullStudent = null;
+                        nullStudent.DisplayInfo();
+                        break;
+
+                    case "5":
+                        // Переполнение
+                        checked
+                        {
+                            int max = int.MaxValue;
+                            int overflow = max + 1;
+                        }
+                        break;
+
+                    case "6":
+                        // Неверный формат
+                        string invalidNumber = "abc";
+                        int parsed = int.Parse(invalidNumber);
+                        break;
+
+                    case "7":
+                        // Пользовательская ошибка
+                        throw new InvalidOperationException("Это пользовательская ошибка для тестирования");
+
+                    default:
+                        WarningOccurred?.Invoke("Неверный выбор типа ошибки");
+                        return;
+                }
+            }
+            catch (DivideByZeroException)
+            {
+                ErrorOccurred?.Invoke("Попытка деления на ноль");
+            }
+            catch (IndexOutOfRangeException)
+            {
+                ErrorOccurred?.Invoke("Выход за границы массива");
+            }
+            catch (InvalidCastException)
+            {
+                ErrorOccurred?.Invoke("Ошибка преобразования типов");
+            }
+            catch (NullReferenceException)
+            {
+                ErrorOccurred?.Invoke("Обращение к нулевой ссылке");
+            }
+            catch (OverflowException)
+            {
+                ErrorOccurred?.Invoke("Переполнение числового значения");
+            }
+            catch (FormatException)
+            {
+                ErrorOccurred?.Invoke("Неверный формат данных");
+            }
+            catch (InvalidOperationException ex)
+            {
+                ErrorOccurred?.Invoke($"Пользовательская ошибка: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                ErrorOccurred?.Invoke($"Неизвестная ошибка: {ex.Message}");
+            }
+            finally
+            {
+                Console.WriteLine("Блок finally выполнен");
             }
         }
 
@@ -673,7 +804,7 @@ namespace Lab4_FileWork
             {
                 Student student = institute.Students[i];
                 Console.WriteLine($"{i}. {student.LastName} {student.FirstName}, {student.Course} курс, гр. {student.Group}");
-                Console.Write($"   Оценки: ");
+                Console.Write($" Оценки: ");
                 for (int j = 0; j < student.Grades.Count; j++)
                 {
                     Console.Write(student.Grades[j]);
@@ -681,7 +812,7 @@ namespace Lab4_FileWork
                         Console.Write(", ");
                 }
                 Console.WriteLine();
-                Console.WriteLine($"   Отличник: {(student.IsExcellent ? "Да" : "Нет")}");
+                Console.WriteLine($" Отличник: {(student.IsExcellent ? "Да" : "Нет")}");
             }
         }
 
