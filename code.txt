@@ -1,67 +1,179 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Dursy_lab1_C__only
+namespace Lab2_KASD
 {
+    class ComplexNumber
+    {
+        public double Real;
+        public double Imaginary;
+
+        public ComplexNumber(double real = 0, double imaginary = 0)
+        {
+            Real = real;
+            Imaginary = imaginary;
+        }
+
+        public void Print()
+        {
+            if (Imaginary >= 0)
+                Console.WriteLine($"{Real} + {Imaginary}i");
+            else
+                Console.WriteLine($"{Real} - {-Imaginary}i");
+        }
+
+        public void Addition(double real, double imaginary)
+        {
+            Real += real;
+            Imaginary += imaginary;
+        }
+
+        public void Subtraction(double real, double imaginary)
+        {
+            Real -= real;
+            Imaginary -= imaginary;
+        }
+
+        public void Multiplication(double real, double imaginary)
+        {
+            double newReal = Real * real - Imaginary * imaginary;
+            double newImaginary = Real * imaginary + Imaginary * real;
+            Real = newReal;
+            Imaginary = newImaginary;
+        }
+
+        public void Division(double real, double imaginary, double znamenatel)
+        {
+            double newReal = (Real * real + Imaginary * imaginary) / znamenatel;
+            double newImaginary = (Imaginary * real - Real * imaginary) / znamenatel;
+            Real = newReal;
+            Imaginary = newImaginary;
+        }
+
+        public double Module()
+        {
+            return Math.Sqrt(Real * Real + Imaginary * Imaginary);
+        }
+
+        public double Argument()
+        {
+            return Math.Atan2(Imaginary, Real);
+        }
+    }
+
     class Program
     {
         static void Main()
         {
-            
-            string[] lines = File.ReadAllLines("input.txt");
-            int n = int.Parse(lines[0]);
+            ComplexNumber current = new ComplexNumber();
+            bool running = true;
 
-            
-            double[] x = new double[n];
-            string[] vectorValues = lines[1].Split(' ');
-            for (int i = 0; i < n; i++)
-            {
-                x[i] = double.Parse(vectorValues[i]);
-            }
+            Console.WriteLine("Калькулятор комплексных чисел");
 
-            
-            double[,] G = new double[n, n];
-            for (int i = 0; i < n; i++)
+            while (running)
             {
-                string[] rowValues = lines[i + 2].Split(' ');
-                for (int j = 0; j < n; j++)
+                Console.WriteLine("\nМеню:");
+                Console.WriteLine("S - Установить число");
+                Console.WriteLine("A - Сложение");
+                Console.WriteLine("B - Вычитание");
+                Console.WriteLine("M - Умножение");
+                Console.WriteLine("D - Деление");
+                Console.WriteLine("G - Модуль");
+                Console.WriteLine("R - Аргумент");
+                Console.WriteLine("P - Вывести число");
+                Console.WriteLine("Q - Выход");
+                Console.Write("Выберите команду: ");
+
+                char command = Console.ReadKey().KeyChar;
+                Console.WriteLine();
+
+                switch (char.ToUpper(command))
                 {
-                    G[i, j] = double.Parse(rowValues[j]);
+                    case 'S':
+                        Console.Write("Введите вещественную часть: ");
+                        double real = double.Parse(Console.ReadLine());
+                        Console.Write("Введите мнимую часть: ");
+                        double imaginary = double.Parse(Console.ReadLine());
+                        current.Real = real;
+                        current.Imaginary = imaginary;
+                        Console.Write("Новое число: ");
+                        current.Print();
+                        break;
+
+                    case 'A':
+                        Console.Write("Введите вещественную часть второго числа: ");
+                        real = double.Parse(Console.ReadLine());
+                        Console.Write("Введите мнимую часть второго числа: ");
+                        imaginary = double.Parse(Console.ReadLine());
+                        current.Addition(real, imaginary);
+                        Console.Write("Результат: ");
+                        current.Print();
+                        break;
+
+                    case 'B':
+                        Console.Write("Введите вещественную часть второго числа: ");
+                        real = double.Parse(Console.ReadLine());
+                        Console.Write("Введите мнимую часть второго числа: ");
+                        imaginary = double.Parse(Console.ReadLine());
+                        current.Subtraction(real, imaginary);
+                        Console.Write("Результат: ");
+                        current.Print();
+                        break;
+
+                    case 'M':
+                        Console.Write("Введите вещественную часть второго числа: ");
+                        real = double.Parse(Console.ReadLine());
+                        Console.Write("Введите мнимую часть второго числа: ");
+                        imaginary = double.Parse(Console.ReadLine());
+                        current.Multiplication(real, imaginary);
+                        Console.Write("Результат: ");
+                        current.Print();
+                        break;
+
+                    case 'D':
+                        Console.Write("Введите вещественную часть второго числа: ");
+                        real = double.Parse(Console.ReadLine());
+                        Console.Write("Введите мнимую часть второго числа: ");
+                        imaginary = double.Parse(Console.ReadLine());
+                        double znamenatel = real * real + imaginary * imaginary;
+                        if (znamenatel == 0)
+                        {
+                            Console.WriteLine("Ошибка: деление на ноль!");
+                        }
+                        else
+                        {
+                            current.Division(real, imaginary, znamenatel);
+                            Console.Write("Результат: ");
+                            current.Print();
+                        }
+                        break;
+
+                    case 'G':
+                        Console.WriteLine($"Модуль: {current.Module()}");
+                        break;
+
+                    case 'R':
+                        Console.WriteLine($"Аргумент: {current.Argument()} радиан");
+                        break;
+
+                    case 'P':
+                        Console.Write("Текущее число: ");
+                        current.Print();
+                        break;
+
+                    case 'Q':
+                        running = false;
+                        Console.WriteLine("Выход");
+                        break;
+
+                    default:
+                        Console.WriteLine("Неизвестная команда");
+                        break;
                 }
             }
-
-            
-            for (int i = 0; i < n; i++)
-            {
-                for (int j = i + 1; j < n; j++)
-                {
-                    if (G[i, j] != G[j, i])
-                    {
-                        Console.WriteLine("Ошибка: матрица G не симметрична!");
-                        return;
-                    }
-                }
-            }
-
-            // Вычисление длины: sqrt(x * G * x^T) ~ sqrt(sumI * sumJ xi * Gij * xj)
-            double result = 0;
-            for (int i = 0; i < n; i++)
-            {
-                double temp = 0;
-                for (int j = 0; j < n; j++)
-                {
-                    temp += G[i, j] * x[j];
-                }
-                result += x[i] * temp;
-            }
-
-            double length = Math.Sqrt(result);
-            Console.WriteLine($"Длина вектора: {length:F6}");
         }
-          
     }
 }
