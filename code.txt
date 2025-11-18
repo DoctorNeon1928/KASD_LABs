@@ -4,175 +4,261 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lab2_KASD
+namespace Dursy_KASD_5
 {
-    class ComplexNumber
+    public class BinaryHeap
     {
-        public double Real;
-        public double Imaginary;
+        private List<int> heap;
+        private bool isMinHeap;
 
-        public ComplexNumber(double real = 0, double imaginary = 0)
+        public BinaryHeap(bool minHeap = true)
         {
-            Real = real;
-            Imaginary = imaginary;
+            heap = new List<int>();
+            isMinHeap = minHeap;
         }
 
-        public void Print()
+        public BinaryHeap(int[] array, bool minHeap = true)
         {
-            if (Imaginary >= 0)
-                Console.WriteLine($"{Real} + {Imaginary}i");
+            isMinHeap = minHeap;
+            heap = new List<int>(array);
+            BuildHeap();
+        }
+
+        public int Count
+        {
+            get { return heap.Count; }
+        }
+
+        public bool IsEmpty
+        {
+            get { return heap.Count == 0; }
+        }
+
+        public int Peek()
+        {
+            if (heap.Count == 0)
+            {
+                return 0;
+            }
+
+            return heap[0];
+        }
+
+        public void Add(int item)
+        {
+            heap.Add(item);
+            SiftUp(heap.Count - 1);
+        }
+
+        public int Remove()
+        {
+            if (heap.Count == 0)
+            {
+                return 0;
+            }
+
+            int result = heap[0];
+            int lastIndex = heap.Count - 1;
+            heap[0] = heap[lastIndex];
+            heap.RemoveAt(lastIndex);
+
+            if (heap.Count > 0)
+            {
+                SiftDown(0);
+            }
+
+            return result;
+        }
+
+        public void UpdateKey(int index, int newValue)
+        {
+            if (index < 0 || index >= heap.Count)
+            {
+                return;
+            }
+
+            int oldValue = heap[index];
+            heap[index] = newValue;
+
+            if (newValue < oldValue)
+            {
+                SiftUp(index);
+            }
+            else if (newValue > oldValue)
+            {
+                SiftDown(index);
+            }
+        }
+
+        public BinaryHeap Merge(BinaryHeap otherHeap)
+        {
+            if (otherHeap == null)
+            {
+                return new BinaryHeap(isMinHeap);
+            }
+
+            if (this.isMinHeap != otherHeap.isMinHeap)
+            {
+                return new BinaryHeap(isMinHeap);
+            }
+
+            int[] mergedArray = new int[this.heap.Count + otherHeap.heap.Count];
+            this.heap.CopyTo(mergedArray, 0);
+            otherHeap.heap.CopyTo(mergedArray, this.heap.Count);
+
+            return new BinaryHeap(mergedArray, this.isMinHeap);
+        }
+
+        public int[] ToArray()
+        {
+            return heap.ToArray();
+        }
+
+        public void Clear()
+        {
+            heap.Clear();
+        }
+
+        private void BuildHeap()
+        {
+            for (int i = heap.Count / 2 - 1; i >= 0; i--)
+            {
+                SiftDown(i);
+            }
+        }
+
+        private void SiftUp(int index)
+        {
+            while (index > 0)
+            {
+                int parentIndex = (index - 1) / 2;
+
+                if (ShouldSwap(parentIndex, index))
+                {
+                    Swap(parentIndex, index);
+                    index = parentIndex;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        private void SiftDown(int index)
+        {
+            int lastIndex = heap.Count - 1;
+
+            while (index < lastIndex)
+            {
+                int leftChildIndex = 2 * index + 1;
+                int rightChildIndex = 2 * index + 2;
+                int swapIndex = index;
+
+                if (leftChildIndex <= lastIndex && ShouldSwap(swapIndex, leftChildIndex))
+                {
+                    swapIndex = leftChildIndex;
+                }
+
+                if (rightChildIndex <= lastIndex && ShouldSwap(swapIndex, rightChildIndex))
+                {
+                    swapIndex = rightChildIndex;
+                }
+
+                if (swapIndex != index)
+                {
+                    Swap(index, swapIndex);
+                    index = swapIndex;
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        private bool ShouldSwap(int parentIndex, int childIndex)
+        {
+            if (isMinHeap)
+            {
+                return heap[parentIndex] > heap[childIndex];
+            }
             else
-                Console.WriteLine($"{Real} - {-Imaginary}i");
+            {
+                return heap[parentIndex] < heap[childIndex];
+            }
         }
 
-        public void Addition(double real, double imaginary)
+        private void Swap(int index1, int index2)
         {
-            Real += real;
-            Imaginary += imaginary;
-        }
-
-        public void Subtraction(double real, double imaginary)
-        {
-            Real -= real;
-            Imaginary -= imaginary;
-        }
-
-        public void Multiplication(double real, double imaginary)
-        {
-            double newReal = Real * real - Imaginary * imaginary;
-            double newImaginary = Real * imaginary + Imaginary * real;
-            Real = newReal;
-            Imaginary = newImaginary;
-        }
-
-        public void Division(double real, double imaginary, double znamenatel)
-        {
-            double newReal = (Real * real + Imaginary * imaginary) / znamenatel;
-            double newImaginary = (Imaginary * real - Real * imaginary) / znamenatel;
-            Real = newReal;
-            Imaginary = newImaginary;
-        }
-
-        public double Module()
-        {
-            return Math.Sqrt(Real * Real + Imaginary * Imaginary);
-        }
-
-        public double Argument()
-        {
-            return Math.Atan2(Imaginary, Real);
+            int temp = heap[index1];
+            heap[index1] = heap[index2];
+            heap[index2] = temp;
         }
     }
 
-    class Program
+    public class Program
     {
-        static void Main()
+        public static void Main()
         {
-            ComplexNumber current = new ComplexNumber();
-            bool running = true;
+            BinaryHeap minHeap = new BinaryHeap();
 
-            Console.WriteLine("Калькулятор комплексных чисел");
+            minHeap.Add(5);
+            minHeap.Add(3);
+            minHeap.Add(8);
+            minHeap.Add(1);
+            minHeap.Add(10);
 
-            while (running)
+            Console.WriteLine("Min-Heap:");
+            while (!minHeap.IsEmpty)
             {
-                Console.WriteLine("\nМеню:");
-                Console.WriteLine("S - Установить число");
-                Console.WriteLine("A - Сложение");
-                Console.WriteLine("B - Вычитание");
-                Console.WriteLine("M - Умножение");
-                Console.WriteLine("D - Деление");
-                Console.WriteLine("G - Модуль");
-                Console.WriteLine("R - Аргумент");
-                Console.WriteLine("P - Вывести число");
-                Console.WriteLine("Q - Выход");
-                Console.Write("Выберите команду: ");
+                Console.WriteLine(minHeap.Remove());
+            }
 
-                char command = Console.ReadKey().KeyChar;
-                Console.WriteLine();
+            BinaryHeap maxHeap = new BinaryHeap(false);
 
-                switch (char.ToUpper(command))
-                {
-                    case 'S':
-                        Console.Write("Введите вещественную часть: ");
-                        double real = double.Parse(Console.ReadLine());
-                        Console.Write("Введите мнимую часть: ");
-                        double imaginary = double.Parse(Console.ReadLine());
-                        current.Real = real;
-                        current.Imaginary = imaginary;
-                        Console.Write("Новое число: ");
-                        current.Print();
-                        break;
+            maxHeap.Add(5);
+            maxHeap.Add(3);
+            maxHeap.Add(8);
+            maxHeap.Add(1);
+            maxHeap.Add(10);
 
-                    case 'A':
-                        Console.Write("Введите вещественную часть второго числа: ");
-                        real = double.Parse(Console.ReadLine());
-                        Console.Write("Введите мнимую часть второго числа: ");
-                        imaginary = double.Parse(Console.ReadLine());
-                        current.Addition(real, imaginary);
-                        Console.Write("Результат: ");
-                        current.Print();
-                        break;
+            Console.WriteLine("\nMax-Heap:");
+            while (!maxHeap.IsEmpty)
+            {
+                Console.WriteLine(maxHeap.Remove());
+            }
 
-                    case 'B':
-                        Console.Write("Введите вещественную часть второго числа: ");
-                        real = double.Parse(Console.ReadLine());
-                        Console.Write("Введите мнимую часть второго числа: ");
-                        imaginary = double.Parse(Console.ReadLine());
-                        current.Subtraction(real, imaginary);
-                        Console.Write("Результат: ");
-                        current.Print();
-                        break;
+            BinaryHeap heap1 = new BinaryHeap();
+            heap1.Add(2);
+            heap1.Add(4);
+            heap1.Add(6);
 
-                    case 'M':
-                        Console.Write("Введите вещественную часть второго числа: ");
-                        real = double.Parse(Console.ReadLine());
-                        Console.Write("Введите мнимую часть второго числа: ");
-                        imaginary = double.Parse(Console.ReadLine());
-                        current.Multiplication(real, imaginary);
-                        Console.Write("Результат: ");
-                        current.Print();
-                        break;
+            BinaryHeap heap2 = new BinaryHeap();
+            heap2.Add(1);
+            heap2.Add(3);
+            heap2.Add(5);
 
-                    case 'D':
-                        Console.Write("Введите вещественную часть второго числа: ");
-                        real = double.Parse(Console.ReadLine());
-                        Console.Write("Введите мнимую часть второго числа: ");
-                        imaginary = double.Parse(Console.ReadLine());
-                        double znamenatel = real * real + imaginary * imaginary;
-                        if (znamenatel == 0)
-                        {
-                            Console.WriteLine("Ошибка: деление на ноль!");
-                        }
-                        else
-                        {
-                            current.Division(real, imaginary, znamenatel);
-                            Console.Write("Результат: ");
-                            current.Print();
-                        }
-                        break;
+            BinaryHeap mergedHeap = heap1.Merge(heap2);
 
-                    case 'G':
-                        Console.WriteLine($"Модуль: {current.Module()}");
-                        break;
+            Console.WriteLine("\nMerged Heap:");
+            while (!mergedHeap.IsEmpty)
+            {
+                Console.WriteLine(mergedHeap.Remove());
+            }
 
-                    case 'R':
-                        Console.WriteLine($"Аргумент: {current.Argument()} радиан");
-                        break;
+            Console.WriteLine("\nПроверка UpdateKey:");
+            BinaryHeap testHeap = new BinaryHeap();
+            testHeap.Add(10);
+            testHeap.Add(20);
+            testHeap.Add(15);
+            testHeap.Add(30);
 
-                    case 'P':
-                        Console.Write("Текущее число: ");
-                        current.Print();
-                        break;
-
-                    case 'Q':
-                        running = false;
-                        Console.WriteLine("Выход");
-                        break;
-
-                    default:
-                        Console.WriteLine("Неизвестная команда");
-                        break;
-                }
+            testHeap.UpdateKey(1, 5);
+            Console.WriteLine("После обновления индексов 1-5:");
+            while (!testHeap.IsEmpty)
+            {
+                Console.WriteLine(testHeap.Remove());
             }
         }
     }
