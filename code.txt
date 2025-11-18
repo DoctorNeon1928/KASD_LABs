@@ -4,124 +4,329 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Dursy_KASD_5
+namespace Lab6_KASD
 {
-    public class BinaryHeap
+    public class PriorityQueueComparer<T> : IComparer<T>
     {
-        private List<int> heap;
-        private bool isMinHeap;
+        private bool isMinPriority;
 
-        public BinaryHeap(bool minHeap = true)
+        public PriorityQueueComparer(bool minPriority = true)
         {
-            heap = new List<int>();
-            isMinHeap = minHeap;
+            isMinPriority = minPriority;
         }
 
-        public BinaryHeap(int[] array, bool minHeap = true)
+        public int Compare(T x, T y)
         {
-            isMinHeap = minHeap;
-            heap = new List<int>(array);
+            if (x == null && y == null) return 0;
+            if (x == null) return isMinPriority ? -1 : 1;
+            if (y == null) return isMinPriority ? 1 : -1;
+
+            int result = Comparer<T>.Default.Compare(x, y);
+            return isMinPriority ? result : -result;
+        }
+    }
+
+    public class MyPriorityQueue<T>
+    {
+        private T[] queue;
+        private int size;
+        private IComparer<T> comparator;
+
+        // 1. Конструктор пустой очереди с начальной ёмкостью 11
+        public MyPriorityQueue()
+        {
+            queue = new T[11];
+            size = 0;
+            comparator = new PriorityQueueComparer<T>(true);
+        }
+
+        // 2. Конструктор из массива
+        public MyPriorityQueue(T[] a)
+        {
+            if (a == null)
+            {
+                queue = new T[11];
+                size = 0;
+            }
+            else
+            {
+                queue = new T[Math.Max(a.Length, 11)];
+                Array.Copy(a, queue, a.Length);
+                size = a.Length;
+            }
+            comparator = new PriorityQueueComparer<T>(true);
             BuildHeap();
         }
 
-        public int Count
+        // 3. Конструктор с указанной начальной ёмкостью
+        public MyPriorityQueue(int initialCapacity)
         {
-            get { return heap.Count; }
+            if (initialCapacity < 1)
+                initialCapacity = 11;
+
+            queue = new T[initialCapacity];
+            size = 0;
+            comparator = new PriorityQueueComparer<T>(true);
         }
 
-        public bool IsEmpty
+        // 4. Конструктор с начальной ёмкостью и компаратором
+        public MyPriorityQueue(int initialCapacity, IComparer<T> comp)
         {
-            get { return heap.Count == 0; }
+            if (initialCapacity < 1)
+                initialCapacity = 11;
+
+            queue = new T[initialCapacity];
+            size = 0;
+
+            if (comp != null)
+                comparator = comp;
+            else
+                comparator = new PriorityQueueComparer<T>(true);
         }
 
-        public int Peek()
+        // 5. Конструктор копирования из другой очереди
+        public MyPriorityQueue(MyPriorityQueue<T> c)
         {
-            if (heap.Count == 0)
+            if (c == null)
             {
-                return 0;
+                queue = new T[11];
+                size = 0;
+                comparator = new PriorityQueueComparer<T>(true);
+            }
+            else
+            {
+                queue = new T[c.queue.Length];
+                Array.Copy(c.queue, queue, c.queue.Length);
+                size = c.size;
+                comparator = c.comparator;
+            }
+            BuildHeap();
+        }
+
+        // 6. Метод add для добавления элемента
+        public void Add(T e)
+        {
+            if (e == null)
+                return;
+
+            if (size >= queue.Length)
+            {
+                int newCapacity = CalculateNewCapacity();
+                ResizeQueue(newCapacity);
             }
 
-            return heap[0];
+            queue[size] = e;
+            SiftUp(size);
+            size++;
         }
 
-        public void Add(int item)
+        // 7. Метод addAll для добавления элементов из массива
+        public void AddAll(T[] a)
         {
-            heap.Add(item);
-            SiftUp(heap.Count - 1);
+            if (a == null)
+                return;
+
+            foreach (T element in a)
+            {
+                Add(element);
+            }
         }
 
-        public int Remove()
+        // 8. Метод clear для удаления всех элементов
+        public void Clear()
         {
-            if (heap.Count == 0)
+            Array.Clear(queue, 0, size);
+            size = 0;
+        }
+
+        // 9. Метод contains для проверки наличия объекта
+        public bool Contains(object o)
+        {
+            if (o == null) return false;
+            if (!(o is T)) return false;
+            T value = (T)o;
+
+            for (int i = 0; i < size; i++)
             {
-                return 0;
+                if (EqualityComparer<T>.Default.Equals(queue[i], value))
+                    return true;
+            }
+            return false;
+        }
+
+        // 10. Метод containsAll для проверки наличия всех объектов
+        public bool ContainsAll(T[] a)
+        {
+            if (a == null)
+                return true;
+
+            foreach (T element in a)
+            {
+                if (!Contains(element))
+                    return false;
+            }
+            return true;
+        }
+
+        // 11. Метод isEmpty для проверки пустоты
+        public bool IsEmpty()
+        {
+            return size == 0;
+        }
+
+        // 12. Метод remove для удаления указанного объекта
+        public bool Remove(object o)
+        {
+            if (o == null) return false;
+            if (!(o is T)) return false;
+            T value = (T)o;
+
+            for (int i = 0; i < size; i++)
+            {
+                if (EqualityComparer<T>.Default.Equals(queue[i], value))
+                {
+                    RemoveAt(i);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 13. Метод removeAll для удаления указанных объектов
+        public bool RemoveAll(T[] a)
+        {
+            if (a == null)
+                return false;
+
+            bool modified = false;
+            foreach (T element in a)
+            {
+                while (Remove(element))
+                {
+                    modified = true;
+                }
+            }
+            return modified;
+        }
+
+        // 14. Метод retainAll для оставления только указанных объектов
+        public bool RetainAll(T[] a)
+        {
+            if (a == null)
+            {
+                if (size > 0)
+                {
+                    Clear();
+                    return true;
+                }
+                return false;
             }
 
-            int result = heap[0];
-            int lastIndex = heap.Count - 1;
-            heap[0] = heap[lastIndex];
-            heap.RemoveAt(lastIndex);
-
-            if (heap.Count > 0)
+            List<T> toKeep = new List<T>();
+            for (int i = 0; i < size; i++)
             {
-                SiftDown(0);
+                bool found = false;
+                foreach (T element in a)
+                {
+                    if (EqualityComparer<T>.Default.Equals(queue[i], element))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found)
+                {
+                    toKeep.Add(queue[i]);
+                }
             }
 
+            bool modified = toKeep.Count != size;
+            if (modified)
+            {
+                queue = toKeep.ToArray();
+                size = toKeep.Count;
+                BuildHeap();
+            }
+            return modified;
+        }
+
+        // 15. Метод size для получения размера
+        public int Size()
+        {
+            return size;
+        }
+
+        // 16. Метод toArray для возвращения массива объектов
+        public T[] ToArray()
+        {
+            T[] result = new T[size];
+            Array.Copy(queue, 0, result, 0, size);
             return result;
         }
 
-        public void UpdateKey(int index, int newValue)
+        // 17. Метод toArray с параметром
+        public T[] ToArray(T[] a)
         {
-            if (index < 0 || index >= heap.Count)
-            {
-                return;
-            }
+            if (a == null)
+                return ToArray();
 
-            int oldValue = heap[index];
-            heap[index] = newValue;
+            if (a.Length < size)
+                return ToArray();
 
-            if (newValue < oldValue)
+            Array.Copy(queue, 0, a, 0, size);
+            if (a.Length > size)
+                a[size] = default(T);
+
+            return a;
+        }
+
+        // 18. Метод element для возвращения элемента из головы без удаления
+        public T Element()
+        {
+            if (size == 0)
+                return default(T);
+            return queue[0];
+        }
+
+        // 19. Метод offer для попытки добавления элемента
+        public bool Offer(T obj)
+        {
+            if (obj == null)
+                return false;
+
+            try
             {
-                SiftUp(index);
+                Add(obj);
+                return true;
             }
-            else if (newValue > oldValue)
+            catch
             {
-                SiftDown(index);
+                return false;
             }
         }
 
-        public BinaryHeap Merge(BinaryHeap otherHeap)
+        // 20. Метод peek для возврата элемента из головы без удаления
+        public T Peek()
         {
-            if (otherHeap == null)
-            {
-                return new BinaryHeap(isMinHeap);
-            }
-
-            if (this.isMinHeap != otherHeap.isMinHeap)
-            {
-                return new BinaryHeap(isMinHeap);
-            }
-
-            int[] mergedArray = new int[this.heap.Count + otherHeap.heap.Count];
-            this.heap.CopyTo(mergedArray, 0);
-            otherHeap.heap.CopyTo(mergedArray, this.heap.Count);
-
-            return new BinaryHeap(mergedArray, this.isMinHeap);
+            if (size == 0)
+                return default(T);
+            return queue[0];
         }
 
-        public int[] ToArray()
+        // 21. Метод poll для удаления и возврата элемента из головы
+        public T Poll()
         {
-            return heap.ToArray();
-        }
+            if (size == 0)
+                return default(T);
 
-        public void Clear()
-        {
-            heap.Clear();
+            T result = queue[0];
+            RemoveAt(0);
+            return result;
         }
 
         private void BuildHeap()
         {
-            for (int i = heap.Count / 2 - 1; i >= 0; i--)
+            for (int i = size / 2 - 1; i >= 0; i--)
             {
                 SiftDown(i);
             }
@@ -132,10 +337,9 @@ namespace Dursy_KASD_5
             while (index > 0)
             {
                 int parentIndex = (index - 1) / 2;
-
-                if (ShouldSwap(parentIndex, index))
+                if (comparator.Compare(queue[index], queue[parentIndex]) < 0)
                 {
-                    Swap(parentIndex, index);
+                    Swap(index, parentIndex);
                     index = parentIndex;
                 }
                 else
@@ -147,23 +351,17 @@ namespace Dursy_KASD_5
 
         private void SiftDown(int index)
         {
-            int lastIndex = heap.Count - 1;
-
-            while (index < lastIndex)
+            while (index < size)
             {
                 int leftChildIndex = 2 * index + 1;
                 int rightChildIndex = 2 * index + 2;
                 int swapIndex = index;
 
-                if (leftChildIndex <= lastIndex && ShouldSwap(swapIndex, leftChildIndex))
-                {
+                if (leftChildIndex < size && comparator.Compare(queue[leftChildIndex], queue[swapIndex]) < 0)
                     swapIndex = leftChildIndex;
-                }
 
-                if (rightChildIndex <= lastIndex && ShouldSwap(swapIndex, rightChildIndex))
-                {
+                if (rightChildIndex < size && comparator.Compare(queue[rightChildIndex], queue[swapIndex]) < 0)
                     swapIndex = rightChildIndex;
-                }
 
                 if (swapIndex != index)
                 {
@@ -177,23 +375,36 @@ namespace Dursy_KASD_5
             }
         }
 
-        private bool ShouldSwap(int parentIndex, int childIndex)
-        {
-            if (isMinHeap)
-            {
-                return heap[parentIndex] > heap[childIndex];
-            }
-            else
-            {
-                return heap[parentIndex] < heap[childIndex];
-            }
-        }
-
         private void Swap(int index1, int index2)
         {
-            int temp = heap[index1];
-            heap[index1] = heap[index2];
-            heap[index2] = temp;
+            T temp = queue[index1];
+            queue[index1] = queue[index2];
+            queue[index2] = temp;
+        }
+
+        private int CalculateNewCapacity()
+        {
+            if (queue.Length < 64)
+                return queue.Length + 2;
+            else
+                return queue.Length + (queue.Length / 2);
+        }
+
+        private void ResizeQueue(int newCapacity)
+        {
+            T[] newQueue = new T[newCapacity];
+            Array.Copy(queue, 0, newQueue, 0, size);
+            queue = newQueue;
+        }
+
+        private void RemoveAt(int index)
+        {
+            if (index < 0 || index >= size) return;
+
+            queue[index] = queue[size - 1];
+            queue[size - 1] = default(T);
+            size--;
+            SiftDown(index);
         }
     }
 
@@ -201,65 +412,50 @@ namespace Dursy_KASD_5
     {
         public static void Main()
         {
-            BinaryHeap minHeap = new BinaryHeap();
+            Console.WriteLine("=Тестирование MyPriorityQueue<int>=");
 
-            minHeap.Add(5);
-            minHeap.Add(3);
-            minHeap.Add(8);
-            minHeap.Add(1);
-            minHeap.Add(10);
+            MyPriorityQueue<int> pq1 = new MyPriorityQueue<int>();
+            Console.WriteLine($"Пустая очередь: Size = {pq1.Size()}, IsEmpty = {pq1.IsEmpty()}");
 
-            Console.WriteLine("Min-Heap:");
-            while (!minHeap.IsEmpty)
+            int[] initialArray = { 5, 2, 8, 1, 9 };
+            MyPriorityQueue<int> pq2 = new MyPriorityQueue<int>(initialArray);
+            Console.WriteLine($"Очередь из массива: Size = {pq2.Size()}, Peek = {pq2.Peek()}");
+
+            MyPriorityQueue<int> pq3 = new MyPriorityQueue<int>(20);
+            Console.WriteLine($"Очередь с ёмкостью 20: Size = {pq3.Size()}");
+
+            MyPriorityQueue<int> pq4 = new MyPriorityQueue<int>(pq2);
+            Console.WriteLine($"Копия очереди: Size = {pq4.Size()}, Peek = {pq4.Peek()}");
+
+            pq1.Add(10);
+            pq1.Add(3);
+            pq1.Add(7);
+            pq1.Add(1);
+            Console.WriteLine($"После добавления: Size = {pq1.Size()}, Peek = {pq1.Peek()}");
+
+            int[] addArray = { 15, 4, 6 };
+            pq1.AddAll(addArray);
+            Console.WriteLine($"После AddAll: Size = {pq1.Size()}");
+
+            // 3. Тестирование операций с головой очереди
+            Console.WriteLine($"Peek: {pq1.Peek()}");
+            Console.WriteLine($"Element: {pq1.Element()}");
+            Console.WriteLine($"Poll: {pq1.Poll()}");
+            Console.WriteLine($"После Poll: Size = {pq1.Size()}, Peek = {pq1.Peek()}");
+
+            // 4. Тестирование offer
+            Console.WriteLine($"Offer(20): {pq1.Offer(20)}");
+            Console.WriteLine($"Offer(5): {pq1.Offer(5)}");
+            Console.WriteLine($"После offer: Size = {pq1.Size()}");
+
+            // 5. Тестирование автоматического увеличения ёмкости
+            MyPriorityQueue<int> smallQueue = new MyPriorityQueue<int>(3);
+            for (int i = 0; i < 10; i++)
             {
-                Console.WriteLine(minHeap.Remove());
+                smallQueue.Add(i);
             }
+            Console.WriteLine($"После добавления 10 элементов: Size = {smallQueue.Size()}");
 
-            BinaryHeap maxHeap = new BinaryHeap(false);
-
-            maxHeap.Add(5);
-            maxHeap.Add(3);
-            maxHeap.Add(8);
-            maxHeap.Add(1);
-            maxHeap.Add(10);
-
-            Console.WriteLine("\nMax-Heap:");
-            while (!maxHeap.IsEmpty)
-            {
-                Console.WriteLine(maxHeap.Remove());
-            }
-
-            BinaryHeap heap1 = new BinaryHeap();
-            heap1.Add(2);
-            heap1.Add(4);
-            heap1.Add(6);
-
-            BinaryHeap heap2 = new BinaryHeap();
-            heap2.Add(1);
-            heap2.Add(3);
-            heap2.Add(5);
-
-            BinaryHeap mergedHeap = heap1.Merge(heap2);
-
-            Console.WriteLine("\nMerged Heap:");
-            while (!mergedHeap.IsEmpty)
-            {
-                Console.WriteLine(mergedHeap.Remove());
-            }
-
-            Console.WriteLine("\nПроверка UpdateKey:");
-            BinaryHeap testHeap = new BinaryHeap();
-            testHeap.Add(10);
-            testHeap.Add(20);
-            testHeap.Add(15);
-            testHeap.Add(30);
-
-            testHeap.UpdateKey(1, 5);
-            Console.WriteLine("После обновления индексов 1-5:");
-            while (!testHeap.IsEmpty)
-            {
-                Console.WriteLine(testHeap.Remove());
-            }
         }
     }
 }
