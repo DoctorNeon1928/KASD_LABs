@@ -6,456 +6,377 @@ using System.Threading.Tasks;
 
 namespace Lab6_KASD
 {
-    public class PriorityQueueComparer<T> : IComparer<T>
-    {
-        private bool isMinPriority;
+    public class Request
+{
+    public int RequestId { get; set; }
+    public int Priority { get; set; }
+    public int StepAdded { get; set; }
+    public int StepRemoved { get; set; }
+    
+    public int WaitingTime 
+    { 
+        get { return StepRemoved - StepAdded; } 
+    }
+}
 
-        public PriorityQueueComparer(bool minPriority = true)
+public class RequestComparer : IComparer<Request>
+{
+    public int Compare(Request x, Request y)
+    {
+        if (x == null && y == null) return 0;
+        if (x == null) return 1;
+        if (y == null) return -1;
+        
+        int priorityCompare = y.Priority.CompareTo(x.Priority);
+        if (priorityCompare != 0)
+            return priorityCompare;
+            
+        return x.StepAdded.CompareTo(y.StepAdded);
+    }
+}
+
+public class MyPriorityQueue<T>
+{
+    private T[] queue;
+    private int size;
+    private IComparer<T> comparator;
+
+    public MyPriorityQueue(IComparer<T> comp)
+    {
+        queue = new T[11];
+        size = 0;
+        comparator = comp;
+    }
+
+    public MyPriorityQueue()
+    {
+        queue = new T[11];
+        size = 0;
+        comparator = Comparer<T>.Default;
+    }
+
+    public void Add(T e)
+    {
+        if (e == null) return;
+
+        if (size >= queue.Length)
         {
-            isMinPriority = minPriority;
+            int newCapacity = CalculateNewCapacity();
+            ResizeQueue(newCapacity);
         }
 
-        public int Compare(T x, T y)
-        {
-            if (x == null && y == null) return 0;
-            if (x == null) return isMinPriority ? -1 : 1;
-            if (y == null) return isMinPriority ? 1 : -1;
+        queue[size] = e;
+        SiftUp(size);
+        size++;
+    }
 
-            int result = Comparer<T>.Default.Compare(x, y);
-            return isMinPriority ? result : -result;
+    public void Clear()
+    {
+        Array.Clear(queue, 0, size);
+        size = 0;
+    }
+
+    public bool IsEmpty()
+    {
+        return size == 0;
+    }
+
+    public int Size()
+    {
+        return size;
+    }
+
+    public T Poll()
+    {
+        if (size == 0)
+            return default(T);
+
+        T result = queue[0];
+        RemoveAt(0);
+        return result;
+    }
+
+    private void BuildHeap()
+    {
+        for (int i = size / 2 - 1; i >= 0; i--)
+        {
+            SiftDown(i);
         }
     }
 
-    public class MyPriorityQueue<T>
+    private void SiftUp(int index)
     {
-        private T[] queue;
-        private int size;
-        private IComparer<T> comparator;
-
-        // 1. Конструктор пустой очереди с начальной ёмкостью 11
-        public MyPriorityQueue()
+        while (index > 0)
         {
-            queue = new T[11];
-            size = 0;
-            comparator = new PriorityQueueComparer<T>(true);
-        }
-
-        // 2. Конструктор из массива
-        public MyPriorityQueue(T[] a)
-        {
-            if (a == null)
+            int parentIndex = (index - 1) / 2;
+            if (comparator.Compare(queue[index], queue[parentIndex]) < 0)
             {
-                queue = new T[11];
-                size = 0;
+                Swap(index, parentIndex);
+                index = parentIndex;
             }
             else
             {
-                queue = new T[Math.Max(a.Length, 11)];
-                Array.Copy(a, queue, a.Length);
-                size = a.Length;
+                break;
             }
-            comparator = new PriorityQueueComparer<T>(true);
-            BuildHeap();
         }
+    }
 
-        // 3. Конструктор с указанной начальной ёмкостью
-        public MyPriorityQueue(int initialCapacity)
+    private void SiftDown(int index)
+    {
+        while (index < size)
         {
-            if (initialCapacity < 1)
-                initialCapacity = 11;
+            int leftChildIndex = 2 * index + 1;
+            int rightChildIndex = 2 * index + 2;
+            int swapIndex = index;
 
-            queue = new T[initialCapacity];
-            size = 0;
-            comparator = new PriorityQueueComparer<T>(true);
-        }
+            if (leftChildIndex < size && comparator.Compare(queue[leftChildIndex], queue[swapIndex]) < 0)
+                swapIndex = leftChildIndex;
 
-        // 4. Конструктор с начальной ёмкостью и компаратором
-        public MyPriorityQueue(int initialCapacity, IComparer<T> comp)
-        {
-            if (initialCapacity < 1)
-                initialCapacity = 11;
+            if (rightChildIndex < size && comparator.Compare(queue[rightChildIndex], queue[swapIndex]) < 0)
+                swapIndex = rightChildIndex;
 
-            queue = new T[initialCapacity];
-            size = 0;
-
-            if (comp != null)
-                comparator = comp;
-            else
-                comparator = new PriorityQueueComparer<T>(true);
-        }
-
-        // 5. Конструктор копирования из другой очереди
-        public MyPriorityQueue(MyPriorityQueue<T> c)
-        {
-            if (c == null)
+            if (swapIndex != index)
             {
-                queue = new T[11];
-                size = 0;
-                comparator = new PriorityQueueComparer<T>(true);
+                Swap(index, swapIndex);
+                index = swapIndex;
             }
             else
             {
-                queue = new T[c.queue.Length];
-                Array.Copy(c.queue, queue, c.queue.Length);
-                size = c.size;
-                comparator = c.comparator;
-            }
-            BuildHeap();
-        }
-
-        // 6. Метод add для добавления элемента
-        public void Add(T e)
-        {
-            if (e == null)
-                return;
-
-            if (size >= queue.Length)
-            {
-                int newCapacity = CalculateNewCapacity();
-                ResizeQueue(newCapacity);
-            }
-
-            queue[size] = e;
-            SiftUp(size);
-            size++;
-        }
-
-        // 7. Метод addAll для добавления элементов из массива
-        public void AddAll(T[] a)
-        {
-            if (a == null)
-                return;
-
-            foreach (T element in a)
-            {
-                Add(element);
+                break;
             }
         }
+    }
 
-        // 8. Метод clear для удаления всех элементов
-        public void Clear()
+    private void Swap(int index1, int index2)
+    {
+        T temp = queue[index1];
+        queue[index1] = queue[index2];
+        queue[index2] = temp;
+    }
+
+    private int CalculateNewCapacity()
+    {
+        if (queue.Length < 64)
+            return queue.Length + 2;
+        else
+            return queue.Length + (queue.Length / 2);
+    }
+
+    private void ResizeQueue(int newCapacity)
+    {
+        T[] newQueue = new T[newCapacity];
+        Array.Copy(queue, 0, newQueue, 0, size);
+        queue = newQueue;
+    }
+
+    private void RemoveAt(int index)
+    {
+        if (index < 0 || index >= size) return;
+
+        queue[index] = queue[size - 1];
+        queue[size - 1] = default(T);
+        size--;
+        SiftDown(index);
+    }
+}
+
+public class PriorityRequestSystem
+{
+    private MyPriorityQueue<Request> requestQueue;
+    private int currentRequestId;
+    private int currentStep;
+    private StreamWriter logWriter;
+    
+    public PriorityRequestSystem()
+    {
+        requestQueue = new MyPriorityQueue<Request>(new RequestComparer());
+        currentRequestId = 1;
+        currentStep = 0;
+        logWriter = new StreamWriter("log.txt"); // свой путь добавить не забудь
+    }
+    
+    public void ProcessRequests(int N)
+    {
+        Console.WriteLine($"Начинаем обработку {N} шагов добавления заявок...");
+        
+        for (int step = 1; step <= N; step++)
         {
-            Array.Clear(queue, 0, size);
-            size = 0;
+            currentStep = step;
+            ProcessStep(true);
         }
-
-        // 9. Метод contains для проверки наличия объекта
-        public bool Contains(object o)
+        
+        Console.WriteLine($"Завершена фаза добавления. Осталось заявок: {requestQueue.Size()}");
+        
+        int removalStep = N + 1;
+        while (!requestQueue.IsEmpty())
         {
-            if (o == null) return false;
-            if (!(o is T)) return false;
-            T value = (T)o;
-
-            for (int i = 0; i < size; i++)
+            currentStep = removalStep++;
+            ProcessStep(false);
+        }
+        
+        Console.WriteLine("Все заявки обработаны.");
+    }
+    
+    private void ProcessStep(bool addRequests)
+    {
+        Random random = new Random();
+        
+        if (addRequests)
+        {
+            int requestsToAdd = random.Next(1, 11);
+            
+            for (int i = 0; i < requestsToAdd; i++)
             {
-                if (EqualityComparer<T>.Default.Equals(queue[i], value))
-                    return true;
-            }
-            return false;
-        }
-
-        // 10. Метод containsAll для проверки наличия всех объектов
-        public bool ContainsAll(T[] a)
-        {
-            if (a == null)
-                return true;
-
-            foreach (T element in a)
-            {
-                if (!Contains(element))
-                    return false;
-            }
-            return true;
-        }
-
-        // 11. Метод isEmpty для проверки пустоты
-        public bool IsEmpty()
-        {
-            return size == 0;
-        }
-
-        // 12. Метод remove для удаления указанного объекта
-        public bool Remove(object o)
-        {
-            if (o == null) return false;
-            if (!(o is T)) return false;
-            T value = (T)o;
-
-            for (int i = 0; i < size; i++)
-            {
-                if (EqualityComparer<T>.Default.Equals(queue[i], value))
+                Request newRequest = new Request
                 {
-                    RemoveAt(i);
-                    return true;
+                    RequestId = currentRequestId++,
+                    Priority = random.Next(1, 6),
+                    StepAdded = currentStep
+                };
+                
+                requestQueue.Add(newRequest);
+                LogAction("ADD", newRequest);
+            }
+            
+            Console.WriteLine($"Шаг {currentStep}: Добавлено {requestsToAdd} заявок. Всего в очереди: {requestQueue.Size()}");
+        }
+        
+        if (!requestQueue.IsEmpty())
+        {
+            Request removedRequest = requestQueue.Poll();
+            removedRequest.StepRemoved = currentStep;
+            LogAction("REMOVE", removedRequest);
+            
+            Console.WriteLine($"Шаг {currentStep}: Удалена заявка {removedRequest.RequestId} " +
+                            $"(приоритет {removedRequest.Priority}, время ожидания {removedRequest.WaitingTime})");
+        }
+        else
+        {
+            Console.WriteLine($"Шаг {currentStep}: Очередь пуста, удаление невозможно");
+        }
+    }
+    
+    private void LogAction(string action, Request request)
+    {
+        string logEntry = $"{action} {request.RequestId} {request.Priority} {currentStep}";
+        logWriter.WriteLine(logEntry);
+        logWriter.Flush();
+    }
+    
+    public void AnalyzeResults()
+    {
+        if (!File.Exists("log.txt"))
+        {
+            Console.WriteLine("Файл log.txt не найден");
+            return;
+        }
+        
+        Dictionary<int, Request> requests = new Dictionary<int, Request>();
+        int maxWaitingTime = 0;
+        Request longestWaitingRequest = null;
+        
+        string[] lines = File.ReadAllLines("log.txt");
+        foreach (string line in lines)
+        {
+            string[] parts = line.Split(' ');
+            if (parts.Length < 4) continue;
+            
+            string action = parts[0];
+            int requestId = int.Parse(parts[1]);
+            int priority = int.Parse(parts[2]);
+            int step = int.Parse(parts[3]);
+            
+            if (action == "ADD")
+            {
+                if (!requests.ContainsKey(requestId))
+                {
+                    requests[requestId] = new Request 
+                    { 
+                        RequestId = requestId, 
+                        Priority = priority, 
+                        StepAdded = step 
+                    };
                 }
             }
-            return false;
-        }
-
-        // 13. Метод removeAll для удаления указанных объектов
-        public bool RemoveAll(T[] a)
-        {
-            if (a == null)
-                return false;
-
-            bool modified = false;
-            foreach (T element in a)
+            else if (action == "REMOVE")
             {
-                while (Remove(element))
+                if (requests.ContainsKey(requestId))
                 {
-                    modified = true;
-                }
-            }
-            return modified;
-        }
-
-        // 14. Метод retainAll для оставления только указанных объектов
-        public bool RetainAll(T[] a)
-        {
-            if (a == null)
-            {
-                if (size > 0)
-                {
-                    Clear();
-                    return true;
-                }
-                return false;
-            }
-
-            List<T> toKeep = new List<T>();
-            for (int i = 0; i < size; i++)
-            {
-                bool found = false;
-                foreach (T element in a)
-                {
-                    if (EqualityComparer<T>.Default.Equals(queue[i], element))
+                    requests[requestId].StepRemoved = step;
+                    int waitingTime = requests[requestId].WaitingTime;
+                    
+                    if (waitingTime > maxWaitingTime)
                     {
-                        found = true;
-                        break;
+                        maxWaitingTime = waitingTime;
+                        longestWaitingRequest = requests[requestId];
                     }
                 }
-                if (found)
-                {
-                    toKeep.Add(queue[i]);
-                }
             }
+        }
+        
+        Console.WriteLine("\nАНАЛИЗ РЕЗУЛЬТАТОВ");
+        Console.WriteLine($"Общее количество заявок: {requests.Count}");
+        Console.WriteLine($"Максимальное время ожидания: {maxWaitingTime} шагов");
+        
+        if (longestWaitingRequest != null)
+        {
+            Console.WriteLine("\nИнформация о заявке с максимальным временем ожидания:");
+            Console.WriteLine($"Номер заявки: {longestWaitingRequest.RequestId}");
+            Console.WriteLine($"Приоритет: {longestWaitingRequest.Priority}");
+            Console.WriteLine($"Шаг добавления: {longestWaitingRequest.StepAdded}");
+            Console.WriteLine($"Шаг удаления: {longestWaitingRequest.StepRemoved}");
+            Console.WriteLine($"Время ожидания: {longestWaitingRequest.WaitingTime} шагов");
+        }
+    }
+    
+    public void Close()
+    {
+        logWriter?.Close();
+    }
+}
 
-            bool modified = toKeep.Count != size;
-            if (modified)
+public class Program
+{
+    public static void Main()
+    {
+        Console.WriteLine("=== СИСТЕМА ОБРАБОТКИ ЗАЯВОК С ПРИОРИТЕТОМ ===");
+        
+        try
+        {
+            Console.Write("Введите количество шагов добавления заявок (N): ");
+            int N = int.Parse(Console.ReadLine());
+            
+            if (N <= 0)
             {
-                queue = toKeep.ToArray();
-                size = toKeep.Count;
-                BuildHeap();
+                Console.WriteLine("Количество шагов должно быть положительным числом");
+                return;
             }
-            return modified;
-        }
-
-        // 15. Метод size для получения размера
-        public int Size()
-        {
-            return size;
-        }
-
-        // 16. Метод toArray для возвращения массива объектов
-        public T[] ToArray()
-        {
-            T[] result = new T[size];
-            Array.Copy(queue, 0, result, 0, size);
-            return result;
-        }
-
-        // 17. Метод toArray с параметром
-        public T[] ToArray(T[] a)
-        {
-            if (a == null)
-                return ToArray();
-
-            if (a.Length < size)
-                return ToArray();
-
-            Array.Copy(queue, 0, a, 0, size);
-            if (a.Length > size)
-                a[size] = default(T);
-
-            return a;
-        }
-
-        // 18. Метод element для возвращения элемента из головы без удаления
-        public T Element()
-        {
-            if (size == 0)
-                return default(T);
-            return queue[0];
-        }
-
-        // 19. Метод offer для попытки добавления элемента
-        public bool Offer(T obj)
-        {
-            if (obj == null)
-                return false;
-
+            
+            PriorityRequestSystem system = new PriorityRequestSystem();
+            
             try
             {
-                Add(obj);
-                return true;
+                system.ProcessRequests(N);
+                system.AnalyzeResults();
             }
-            catch
+            finally
             {
-                return false;
+                system.Close();
             }
+            
+            Console.WriteLine("\nЛоги сохранены в файл log.txt");
         }
-
-        // 20. Метод peek для возврата элемента из головы без удаления
-        public T Peek()
+        catch (FormatException)
         {
-            if (size == 0)
-                return default(T);
-            return queue[0];
+            Console.WriteLine("Ошибка: Введите корректное число");
         }
-
-        // 21. Метод poll для удаления и возврата элемента из головы
-        public T Poll()
+        catch (Exception ex)
         {
-            if (size == 0)
-                return default(T);
-
-            T result = queue[0];
-            RemoveAt(0);
-            return result;
+            Console.WriteLine($"Произошла ошибка: {ex.Message}");
         }
-
-        private void BuildHeap()
-        {
-            for (int i = size / 2 - 1; i >= 0; i--)
-            {
-                SiftDown(i);
-            }
-        }
-
-        private void SiftUp(int index)
-        {
-            while (index > 0)
-            {
-                int parentIndex = (index - 1) / 2;
-                if (comparator.Compare(queue[index], queue[parentIndex]) < 0)
-                {
-                    Swap(index, parentIndex);
-                    index = parentIndex;
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-
-        private void SiftDown(int index)
-        {
-            while (index < size)
-            {
-                int leftChildIndex = 2 * index + 1;
-                int rightChildIndex = 2 * index + 2;
-                int swapIndex = index;
-
-                if (leftChildIndex < size && comparator.Compare(queue[leftChildIndex], queue[swapIndex]) < 0)
-                    swapIndex = leftChildIndex;
-
-                if (rightChildIndex < size && comparator.Compare(queue[rightChildIndex], queue[swapIndex]) < 0)
-                    swapIndex = rightChildIndex;
-
-                if (swapIndex != index)
-                {
-                    Swap(index, swapIndex);
-                    index = swapIndex;
-                }
-                else
-                {
-                    break;
-                }
-            }
-        }
-
-        private void Swap(int index1, int index2)
-        {
-            T temp = queue[index1];
-            queue[index1] = queue[index2];
-            queue[index2] = temp;
-        }
-
-        private int CalculateNewCapacity()
-        {
-            if (queue.Length < 64)
-                return queue.Length + 2;
-            else
-                return queue.Length + (queue.Length / 2);
-        }
-
-        private void ResizeQueue(int newCapacity)
-        {
-            T[] newQueue = new T[newCapacity];
-            Array.Copy(queue, 0, newQueue, 0, size);
-            queue = newQueue;
-        }
-
-        private void RemoveAt(int index)
-        {
-            if (index < 0 || index >= size) return;
-
-            queue[index] = queue[size - 1];
-            queue[size - 1] = default(T);
-            size--;
-            SiftDown(index);
-        }
+        
+        Console.WriteLine("Нажмите любую клавишу для выхода...");
+        Console.ReadKey();
     }
-
-    public class Program
-    {
-        public static void Main()
-        {
-            Console.WriteLine("=Тестирование MyPriorityQueue<int>=");
-
-            MyPriorityQueue<int> pq1 = new MyPriorityQueue<int>();
-            Console.WriteLine($"Пустая очередь: Size = {pq1.Size()}, IsEmpty = {pq1.IsEmpty()}");
-
-            int[] initialArray = { 5, 2, 8, 1, 9 };
-            MyPriorityQueue<int> pq2 = new MyPriorityQueue<int>(initialArray);
-            Console.WriteLine($"Очередь из массива: Size = {pq2.Size()}, Peek = {pq2.Peek()}");
-
-            MyPriorityQueue<int> pq3 = new MyPriorityQueue<int>(20);
-            Console.WriteLine($"Очередь с ёмкостью 20: Size = {pq3.Size()}");
-
-            MyPriorityQueue<int> pq4 = new MyPriorityQueue<int>(pq2);
-            Console.WriteLine($"Копия очереди: Size = {pq4.Size()}, Peek = {pq4.Peek()}");
-
-            pq1.Add(10);
-            pq1.Add(3);
-            pq1.Add(7);
-            pq1.Add(1);
-            Console.WriteLine($"После добавления: Size = {pq1.Size()}, Peek = {pq1.Peek()}");
-
-            int[] addArray = { 15, 4, 6 };
-            pq1.AddAll(addArray);
-            Console.WriteLine($"После AddAll: Size = {pq1.Size()}");
-
-            // 3. Тестирование операций с головой очереди
-            Console.WriteLine($"Peek: {pq1.Peek()}");
-            Console.WriteLine($"Element: {pq1.Element()}");
-            Console.WriteLine($"Poll: {pq1.Poll()}");
-            Console.WriteLine($"После Poll: Size = {pq1.Size()}, Peek = {pq1.Peek()}");
-
-            // 4. Тестирование offer
-            Console.WriteLine($"Offer(20): {pq1.Offer(20)}");
-            Console.WriteLine($"Offer(5): {pq1.Offer(5)}");
-            Console.WriteLine($"После offer: Size = {pq1.Size()}");
-
-            // 5. Тестирование автоматического увеличения ёмкости
-            MyPriorityQueue<int> smallQueue = new MyPriorityQueue<int>(3);
-            for (int i = 0; i < 10; i++)
-            {
-                smallQueue.Add(i);
-            }
-            Console.WriteLine($"После добавления 10 элементов: Size = {smallQueue.Size()}");
-
-        }
-    }
+}
 }
