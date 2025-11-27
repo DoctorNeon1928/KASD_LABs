@@ -4,379 +4,429 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Lab6_KASD
+namespace Dursy_Lab_8
 {
-    public class Request
-{
-    public int RequestId { get; set; }
-    public int Priority { get; set; }
-    public int StepAdded { get; set; }
-    public int StepRemoved { get; set; }
-    
-    public int WaitingTime 
-    { 
-        get { return StepRemoved - StepAdded; } 
-    }
-}
-
-public class RequestComparer : IComparer<Request>
-{
-    public int Compare(Request x, Request y)
+    public class MyArrayList<T>
     {
-        if (x == null && y == null) return 0;
-        if (x == null) return 1;
-        if (y == null) return -1;
-        
-        int priorityCompare = y.Priority.CompareTo(x.Priority);
-        if (priorityCompare != 0)
-            return priorityCompare;
-            
-        return x.StepAdded.CompareTo(y.StepAdded);
-    }
-}
+        private T[] elementData;
+        private int size;
 
-public class MyPriorityQueue<T>
-{
-    private T[] queue;
-    private int size;
-    private IComparer<T> comparator;
-
-    public MyPriorityQueue(IComparer<T> comp)
-    {
-        queue = new T[11];
-        size = 0;
-        comparator = comp;
-    }
-
-    public MyPriorityQueue()
-    {
-        queue = new T[11];
-        size = 0;
-        comparator = Comparer<T>.Default;
-    }
-
-    public void Add(T e)
-    {
-        if (e == null) return;
-
-        if (size >= queue.Length)
+        // 1) Конструктор для создания пустого динамического массива
+        public MyArrayList()
         {
-            int newCapacity = CalculateNewCapacity();
-            ResizeQueue(newCapacity);
+            elementData = new T[10];
+            size = 0;
         }
 
-        queue[size] = e;
-        SiftUp(size);
-        size++;
-    }
-
-    public void Clear()
-    {
-        Array.Clear(queue, 0, size);
-        size = 0;
-    }
-
-    public bool IsEmpty()
-    {
-        return size == 0;
-    }
-
-    public int Size()
-    {
-        return size;
-    }
-
-    public T Poll()
-    {
-        if (size == 0)
-            return default(T);
-
-        T result = queue[0];
-        RemoveAt(0);
-        return result;
-    }
-
-    private void BuildHeap()
-    {
-        for (int i = size / 2 - 1; i >= 0; i--)
+        // 2) Конструктор для создания динамического массива из передаваемого массива
+        public MyArrayList(T[] a)
         {
-            SiftDown(i);
-        }
-    }
-
-    private void SiftUp(int index)
-    {
-        while (index > 0)
-        {
-            int parentIndex = (index - 1) / 2;
-            if (comparator.Compare(queue[index], queue[parentIndex]) < 0)
+            if (a == null)
             {
-                Swap(index, parentIndex);
-                index = parentIndex;
-            }
-            else
-            {
-                break;
-            }
-        }
-    }
-
-    private void SiftDown(int index)
-    {
-        while (index < size)
-        {
-            int leftChildIndex = 2 * index + 1;
-            int rightChildIndex = 2 * index + 2;
-            int swapIndex = index;
-
-            if (leftChildIndex < size && comparator.Compare(queue[leftChildIndex], queue[swapIndex]) < 0)
-                swapIndex = leftChildIndex;
-
-            if (rightChildIndex < size && comparator.Compare(queue[rightChildIndex], queue[swapIndex]) < 0)
-                swapIndex = rightChildIndex;
-
-            if (swapIndex != index)
-            {
-                Swap(index, swapIndex);
-                index = swapIndex;
-            }
-            else
-            {
-                break;
-            }
-        }
-    }
-
-    private void Swap(int index1, int index2)
-    {
-        T temp = queue[index1];
-        queue[index1] = queue[index2];
-        queue[index2] = temp;
-    }
-
-    private int CalculateNewCapacity()
-    {
-        if (queue.Length < 64)
-            return queue.Length + 2;
-        else
-            return queue.Length + (queue.Length / 2);
-    }
-
-    private void ResizeQueue(int newCapacity)
-    {
-        T[] newQueue = new T[newCapacity];
-        Array.Copy(queue, 0, newQueue, 0, size);
-        queue = newQueue;
-    }
-
-    private void RemoveAt(int index)
-    {
-        if (index < 0 || index >= size) return;
-
-        queue[index] = queue[size - 1];
-        queue[size - 1] = default(T);
-        size--;
-        SiftDown(index);
-    }
-}
-
-public class PriorityRequestSystem
-{
-    private MyPriorityQueue<Request> requestQueue;
-    private int currentRequestId;
-    private int currentStep;
-    private StreamWriter logWriter;
-    
-    public PriorityRequestSystem()
-    {
-        requestQueue = new MyPriorityQueue<Request>(new RequestComparer());
-        currentRequestId = 1;
-        currentStep = 0;
-        logWriter = new StreamWriter("log.txt"); // свой путь добавить не забудь
-    }
-    
-    public void ProcessRequests(int N)
-    {
-        Console.WriteLine($"Начинаем обработку {N} шагов добавления заявок...");
-        
-        for (int step = 1; step <= N; step++)
-        {
-            currentStep = step;
-            ProcessStep(true);
-        }
-        
-        Console.WriteLine($"Завершена фаза добавления. Осталось заявок: {requestQueue.Size()}");
-        
-        int removalStep = N + 1;
-        while (!requestQueue.IsEmpty())
-        {
-            currentStep = removalStep++;
-            ProcessStep(false);
-        }
-        
-        Console.WriteLine("Все заявки обработаны.");
-    }
-    
-    private void ProcessStep(bool addRequests)
-    {
-        Random random = new Random();
-        
-        if (addRequests)
-        {
-            int requestsToAdd = random.Next(1, 11);
-            
-            for (int i = 0; i < requestsToAdd; i++)
-            {
-                Request newRequest = new Request
-                {
-                    RequestId = currentRequestId++,
-                    Priority = random.Next(1, 6),
-                    StepAdded = currentStep
-                };
-                
-                requestQueue.Add(newRequest);
-                LogAction("ADD", newRequest);
-            }
-            
-            Console.WriteLine($"Шаг {currentStep}: Добавлено {requestsToAdd} заявок. Всего в очереди: {requestQueue.Size()}");
-        }
-        
-        if (!requestQueue.IsEmpty())
-        {
-            Request removedRequest = requestQueue.Poll();
-            removedRequest.StepRemoved = currentStep;
-            LogAction("REMOVE", removedRequest);
-            
-            Console.WriteLine($"Шаг {currentStep}: Удалена заявка {removedRequest.RequestId} " +
-                            $"(приоритет {removedRequest.Priority}, время ожидания {removedRequest.WaitingTime})");
-        }
-        else
-        {
-            Console.WriteLine($"Шаг {currentStep}: Очередь пуста, удаление невозможно");
-        }
-    }
-    
-    private void LogAction(string action, Request request)
-    {
-        string logEntry = $"{action} {request.RequestId} {request.Priority} {currentStep}";
-        logWriter.WriteLine(logEntry);
-        logWriter.Flush();
-    }
-    
-    public void AnalyzeResults()
-    {
-        if (!File.Exists("log.txt"))
-        {
-            Console.WriteLine("Файл log.txt не найден");
-            return;
-        }
-        
-        Dictionary<int, Request> requests = new Dictionary<int, Request>();
-        int maxWaitingTime = 0;
-        Request longestWaitingRequest = null;
-        
-        string[] lines = File.ReadAllLines("log.txt");
-        foreach (string line in lines)
-        {
-            string[] parts = line.Split(' ');
-            if (parts.Length < 4) continue;
-            
-            string action = parts[0];
-            int requestId = int.Parse(parts[1]);
-            int priority = int.Parse(parts[2]);
-            int step = int.Parse(parts[3]);
-            
-            if (action == "ADD")
-            {
-                if (!requests.ContainsKey(requestId))
-                {
-                    requests[requestId] = new Request 
-                    { 
-                        RequestId = requestId, 
-                        Priority = priority, 
-                        StepAdded = step 
-                    };
-                }
-            }
-            else if (action == "REMOVE")
-            {
-                if (requests.ContainsKey(requestId))
-                {
-                    requests[requestId].StepRemoved = step;
-                    int waitingTime = requests[requestId].WaitingTime;
-                    
-                    if (waitingTime > maxWaitingTime)
-                    {
-                        maxWaitingTime = waitingTime;
-                        longestWaitingRequest = requests[requestId];
-                    }
-                }
-            }
-        }
-        
-        Console.WriteLine("\nАНАЛИЗ РЕЗУЛЬТАТОВ");
-        Console.WriteLine($"Общее количество заявок: {requests.Count}");
-        Console.WriteLine($"Максимальное время ожидания: {maxWaitingTime} шагов");
-        
-        if (longestWaitingRequest != null)
-        {
-            Console.WriteLine("\nИнформация о заявке с максимальным временем ожидания:");
-            Console.WriteLine($"Номер заявки: {longestWaitingRequest.RequestId}");
-            Console.WriteLine($"Приоритет: {longestWaitingRequest.Priority}");
-            Console.WriteLine($"Шаг добавления: {longestWaitingRequest.StepAdded}");
-            Console.WriteLine($"Шаг удаления: {longestWaitingRequest.StepRemoved}");
-            Console.WriteLine($"Время ожидания: {longestWaitingRequest.WaitingTime} шагов");
-        }
-    }
-    
-    public void Close()
-    {
-        logWriter?.Close();
-    }
-}
-
-public class Program
-{
-    public static void Main()
-    {
-        Console.WriteLine("=== СИСТЕМА ОБРАБОТКИ ЗАЯВОК С ПРИОРИТЕТОМ ===");
-        
-        try
-        {
-            Console.Write("Введите количество шагов добавления заявок (N): ");
-            int N = int.Parse(Console.ReadLine());
-            
-            if (N <= 0)
-            {
-                Console.WriteLine("Количество шагов должно быть положительным числом");
+                Console.WriteLine("Ошибка: Переданный массив не может быть null");
+                elementData = new T[10];
+                size = 0;
                 return;
             }
-            
-            PriorityRequestSystem system = new PriorityRequestSystem();
-            
-            try
-            {
-                system.ProcessRequests(N);
-                system.AnalyzeResults();
-            }
-            finally
-            {
-                system.Close();
-            }
-            
-            Console.WriteLine("\nЛоги сохранены в файл log.txt");
+
+            elementData = new T[a.Length];
+            Array.Copy(a, elementData, a.Length);
+            size = a.Length;
         }
-        catch (FormatException)
+
+        // 3) Конструктор для создания пустого динамического массива с указанной емкостью
+        public MyArrayList(int capacity)
         {
-            Console.WriteLine("Ошибка: Введите корректное число");
+            if (capacity < 0)
+            {
+                Console.WriteLine("Ошибка: Емкость не может быть отрицательной. Установлена емкость по умолчанию: 10");
+                capacity = 10;
+            }
+
+            elementData = new T[capacity];
+            size = 0;
         }
-        catch (Exception ex)
+
+        // 4) Метод для добавления элемента в конец динамического массива
+        public void Add(T e)
         {
-            Console.WriteLine($"Произошла ошибка: {ex.Message}");
+            EnsureCapacity(size + 1);
+            elementData[size++] = e;
         }
-        
-        Console.WriteLine("Нажмите любую клавишу для выхода...");
-        Console.ReadKey();
+
+        // 5) Метод для добавления элементов из массива
+        public void AddAll(T[] a)
+        {
+            if (a == null)
+            {
+                Console.WriteLine("Ошибка: Переданный массив не может быть null");
+                return;
+            }
+
+            EnsureCapacity(size + a.Length);
+            Array.Copy(a, 0, elementData, size, a.Length);
+            size += a.Length;
+        }
+
+        // 6) Метод для удаления всех элементов из динамического массива
+        public void Clear()
+        {
+            for (int i = 0; i < size; i++)
+            {
+                elementData[i] = default(T);
+            }
+            size = 0;
+        }
+
+        // 7) Метод для проверки наличия указанного объекта в динамическом массиве
+        public bool Contains(object o)
+        {
+            if (o == null)
+            {
+                for (int i = 0; i < size; i++)
+                {
+                    if (elementData[i] == null)
+                        return true;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < size; i++)
+                {
+                    if (o.Equals(elementData[i]))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        // 8) Метод для проверки наличия всех указанных объектов в динамическом массиве
+        public bool ContainsAll(T[] a)
+        {
+            if (a == null)
+            {
+                Console.WriteLine("Ошибка: Переданный массив не может быть null");
+                return false;
+            }
+
+            foreach (var item in a)
+            {
+                if (!Contains(item))
+                    return false;
+            }
+            return true;
+        }
+
+        // 9) Метод для проверки, является ли динамический массив пустым
+        public bool IsEmpty()
+        {
+            return size == 0;
+        }
+
+        // 10) Метод для удаления указанного объекта из динамического массива
+        public bool Remove(object o)
+        {
+            int index = IndexOf(o);
+            if (index >= 0)
+            {
+                RemoveAt(index);
+                return true;
+            }
+            return false;
+        }
+
+        // 11) Метод для удаления всех указанных объектов из динамического массива
+        public void RemoveAll(T[] a)
+        {
+            if (a == null)
+            {
+                Console.WriteLine("Ошибка: Переданный массив не может быть null");
+                return;
+            }
+
+            foreach (var item in a)
+            {
+                while (Remove(item)) { }
+            }
+        }
+
+        // 12) Метод для оставления в динамическом массиве только указанных объектов
+        public void RetainAll(T[] a)
+        {
+            if (a == null)
+            {
+                Console.WriteLine("Ошибка: Переданный массив не может быть null");
+                return;
+            }
+
+            for (int i = size - 1; i >= 0; i--)
+            {
+                if (Array.IndexOf(a, elementData[i]) == -1)
+                {
+                    RemoveAt(i);
+                }
+            }
+        }
+
+        // 13) Метод для получения размера динамического массива в элементах
+        public int Size()
+        {
+            return size;
+        }
+
+        // 14) Метод для возвращения массива объектов, содержащего все элементы динамического массива
+        public object[] ToArray()
+        {
+            object[] result = new object[size];
+            Array.Copy(elementData, result, size);
+            return result;
+        }
+
+        // 15) Метод для возвращения массива объектов с возможностью использования переданного массива
+        public T[] ToArray(T[] a)
+        {
+            if (a == null)
+            {
+                T[] result = new T[size];
+                Array.Copy(elementData, result, size);
+                return result;
+            }
+
+            if (a.Length < size)
+            {
+                T[] result = new T[size];
+                Array.Copy(elementData, result, size);
+                return result;
+            }
+
+            Array.Copy(elementData, a, size);
+            if (a.Length > size)
+            {
+                a[size] = default(T);
+            }
+            return a;
+        }
+
+        // 16) Метод для добавления элемента в указанную позицию
+        public void Add(int index, T e)
+        {
+            if (index < 0 || index > size)
+            {
+                Console.WriteLine($"Ошибка: Индекс {index} вне границ массива [0, {size}]");
+                return;
+            }
+
+            EnsureCapacity(size + 1);
+            if (index < size)
+            {
+                Array.Copy(elementData, index, elementData, index + 1, size - index);
+            }
+            elementData[index] = e;
+            size++;
+        }
+
+        // 17) Метод для добавления элементов в указанную позицию
+        public void AddAll(int index, T[] a)
+        {
+            if (index < 0 || index > size)
+            {
+                Console.WriteLine($"Ошибка: Индекс {index} вне границ массива [0, {size}]");
+                return;
+            }
+            if (a == null)
+            {
+                Console.WriteLine("Ошибка: Переданный массив не может быть null");
+                return;
+            }
+
+            int numNew = a.Length;
+            EnsureCapacity(size + numNew);
+
+            if (index < size)
+            {
+                Array.Copy(elementData, index, elementData, index + numNew, size - index);
+            }
+
+            Array.Copy(a, 0, elementData, index, numNew);
+            size += numNew;
+        }
+
+        // 18) Метод для возвращения элемента в указанной позиции
+        public T Get(int index)
+        {
+            if (index < 0 || index >= size)
+            {
+                Console.WriteLine($"Ошибка: Индекс {index} вне границ массива [0, {size - 1}]");
+                return default(T);
+            }
+
+            return elementData[index];
+        }
+
+        // 19) Метод для возвращения индекса указанного объекта
+        public int IndexOf(object o)
+        {
+            if (o == null)
+            {
+                for (int i = 0; i < size; i++)
+                {
+                    if (elementData[i] == null)
+                        return i;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < size; i++)
+                {
+                    if (o.Equals(elementData[i]))
+                        return i;
+                }
+            }
+            return -1;
+        }
+
+        // 20) Метод для нахождения последнего вхождения указанного объекта
+        public int LastIndexOf(object o)
+        {
+            if (o == null)
+            {
+                for (int i = size - 1; i >= 0; i--)
+                {
+                    if (elementData[i] == null)
+                        return i;
+                }
+            }
+            else
+            {
+                for (int i = size - 1; i >= 0; i--)
+                {
+                    if (o.Equals(elementData[i]))
+                        return i;
+                }
+            }
+            return -1;
+        }
+
+        // 21) Метод для удаления и возвращения элемента в указанной позиции
+        public T RemoveAt(int index)
+        {
+            if (index < 0 || index >= size)
+            {
+                Console.WriteLine($"Ошибка: Индекс {index} вне границ массива [0, {size - 1}]");
+                return default(T);
+            }
+
+            T oldValue = elementData[index];
+
+            int numMoved = size - index - 1;
+            if (numMoved > 0)
+            {
+                Array.Copy(elementData, index + 1, elementData, index, numMoved);
+            }
+
+            elementData[--size] = default(T);
+            return oldValue;
+        }
+
+        // 22) Метод для замены элемента в указанной позиции новым элементом
+        public T Set(int index, T e)
+        {
+            if (index < 0 || index >= size)
+            {
+                Console.WriteLine($"Ошибка: Индекс {index} вне границ массива [0, {size - 1}]");
+                return default(T);
+            }
+
+            T oldValue = elementData[index];
+            elementData[index] = e;
+            return oldValue;
+        }
+
+        // 23) Метод для возвращения части динамического массива
+        public MyArrayList<T> SubList(int fromIndex, int toIndex)
+        {
+            if (fromIndex < 0 || toIndex > size || fromIndex > toIndex)
+            {
+                Console.WriteLine($"Ошибка: Неверный диапазон [{fromIndex}, {toIndex}]");
+                return new MyArrayList<T>();
+            }
+
+            int subSize = toIndex - fromIndex;
+            T[] subArray = new T[subSize];
+            Array.Copy(elementData, fromIndex, subArray, 0, subSize);
+            return new MyArrayList<T>(subArray);
+        }
+
+        private void EnsureCapacity(int minCapacity)
+        {
+            if (minCapacity > elementData.Length)
+            {
+                int newCapacity = elementData.Length * 3 / 2 + 1;
+                if (newCapacity < minCapacity)
+                    newCapacity = minCapacity;
+
+                T[] newElementData = new T[newCapacity];
+                Array.Copy(elementData, newElementData, size);
+                elementData = newElementData;
+                Console.WriteLine($"Массив расширен: {elementData.Length} -> {newCapacity}");
+            }
+        }
+
+        public void Print()
+        {
+            Console.Write("[");
+            for (int i = 0; i < size; i++)
+            {
+                Console.Write(elementData[i]);
+                if (i < size - 1)
+                    Console.Write(", ");
+            }
+            Console.WriteLine($"] (размер: {size}, емкость: {elementData.Length})");
+        }
     }
-}
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("MyArrayList");
+
+            Console.WriteLine("\n1. Создание пустого списка:");
+            MyArrayList<int> list1 = new MyArrayList<int>();
+            list1.Print();
+
+            Console.WriteLine("\n2. Добавление элементов:");
+            for (int i = 1; i <= 5; i++)
+            {
+                list1.Add(i * 10);
+            }
+            list1.Print();
+
+            Console.WriteLine("\n3. Добавление элемента 25 на позицию 2:");
+            list1.Add(2, 25);
+            list1.Print();
+
+            Console.WriteLine("\n4. Создание списка из массива:");
+            string[] words = { "apple", "banana", "cherry" };
+            MyArrayList<string> list2 = new MyArrayList<string>(words);
+            list2.Print();
+
+            Console.WriteLine("\n5. Проверка содержания элементов:");
+            Console.WriteLine($"Содержит 'banana': {list2.Contains("banana")}");
+            Console.WriteLine($"Содержит 'orange': {list2.Contains("orange")}");
+
+            Console.WriteLine("\n6. Работа с элементами:");
+            Console.WriteLine($"Элемент на позиции 1: {list2.Get(1)}");
+            string oldValue = list2.Set(1, "blueberry");
+            Console.WriteLine($"Замена 'banana' на 'blueberry'. Старое значение: {oldValue}");
+            list2.Print();
+
+            Console.WriteLine("\n7. Удаление элементов:");
+            Console.WriteLine($"Удаление 'apple': {list2.Remove("apple")}");
+            list2.Print();
+            Console.WriteLine($"Удаление элемента на позиции 0: {list2.RemoveAt(0)}");
+            list2.Print();
+
+        }
+    }
 }
